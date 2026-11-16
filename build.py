@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent
 NAME = 'dashboard-power-mode'
-VERSION = '2026.11.16.1'
+VERSION = '2026.11.16.2'
 TARGET = f'/usr/local/emhttp/plugins/{NAME}'
 URL = f'https://raw.githubusercontent.com/johnngone/{NAME}-unraid/main/plugin/{NAME}.plg'
 

@@ -86,12 +86,12 @@ with sync_playwright() as p:
     assert not posts
     expect(message).to_be_hidden()
     notice = card.locator('[data-dpm="conflict"]')
-    expect(notice).to_have_text('(Note: Tips & Tweaks plugin may override)')
+    expect(notice).to_have_text('; may be overridden by Tips & Tweaks Plugin')
     expect(notice).to_be_visible()
     assert card.locator('.dpm-heading [data-dpm="conflict"]').count() == 1
     assert card.locator('.tile-header-right-controls [data-dpm="refresh"]').count() == 1
     assert card.locator('.dpm-body [data-dpm="refresh"], .dpm-warning').count() == 0
-    expect(card.locator('[data-dpm="hardware"]')).to_have_text('acpi-cpufreq adjustment')
+    expect(card.locator('[data-dpm="hardware"]')).to_have_text('via acpi-cpufreq')
     assert card.evaluate('el => el.closest("tbody").id') == 'synthetic-processor'
     assert page.locator('tbody#dashboard-power-mode').count() == 0
     expect(page.locator('.dpm-cpu-ghz[data-cpu="0"]')).to_have_text('1.20 GHz')

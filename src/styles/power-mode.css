@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-#dashboard-power-mode .dpm-body { padding: 4px 4px 0; white-space: normal; }
+#dashboard-power-mode .dpm-body { padding: 4px 4px 6px; white-space: normal; }
 #dashboard-power-mode button { cursor: pointer; margin: 0; }
 #dashboard-power-mode button:disabled { cursor: default; }
 #dashboard-power-mode .tile-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
@@ -29,5 +29,5 @@
 .dpm-cpu-metric > .usage-disk { flex: 1 1 auto; min-width: 10px; width: auto !important; margin: 0 !important; }
 .dpm-cpu-ghz { flex: 0 0 8ch; font-size: 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-#dashboard-power-mode [data-dpm="hardware"] { font-weight: bold; }
+#dashboard-power-mode .dpm-heading strong { font-weight: bold; }
 .dpm-adjustments-row > td { padding-bottom: 0 !important; }

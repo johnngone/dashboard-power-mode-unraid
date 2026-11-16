@@ -65,7 +65,7 @@
     const message = (text) => { el('message').textContent = text; el('message').hidden = !text; };
     function render(next) {
       state = next;
-      el('hardware').textContent = next.drivers.length ? `${next.drivers.join(', ')} adjustment` : 'CPU adjustment';
+      el('hardware').textContent = next.drivers.length ? `via ${next.drivers.join(', ')}` : 'via CPU frequency driver';
       el('governor').replaceChildren();
       if (next.governor === null) el('governor').add(new Option('Mixed / unavailable', '', true, true));
       next.governors.forEach((governor) => el('governor').add(new Option(governor, governor, false, next.governor === governor)));

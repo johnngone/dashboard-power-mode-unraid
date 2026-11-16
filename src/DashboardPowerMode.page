@@ -5,7 +5,7 @@ Menu="Dashboard:0"
 $mytiles['dashboard-power-mode']['column1'] = <<<'DPM_TILE'
 <tbody id="dashboard-power-mode" title="_(Power Mode)_">
 <tr><td><span class="tile-header"><span class="tile-header-left">
-<h3 class="tile-header-main dpm-heading"><span data-dpm="hardware">CPU adjustment</span><span class="dpm-conflict" data-dpm="conflict" hidden> (Note: Tips &amp; Tweaks plugin may override)</span></h3></span>
+<h3 class="tile-header-main dpm-heading"><strong>Tuning</strong><span class="dpm-conflict"> (<span data-dpm="hardware">via CPU frequency driver</span><span data-dpm="conflict" hidden>; may be overridden by Tips &amp; Tweaks Plugin</span>)</span></h3></span>
 <span class="tile-header-right"><span class="tile-header-right-controls"><span class="dpm-saving" data-dpm="saving" role="status" aria-live="polite" hidden>Saving…</span><button type="button" class="dpm-refresh" data-dpm="refresh" title="Refresh" aria-label="Refresh"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2.3 5.7"/></svg></button></span></span></span></td></tr>
 <tr><td>
 <div class="dpm-body">
@@ -22,5 +22,5 @@ $mytiles['dashboard-power-mode']['column1'] = <<<'DPM_TILE'
 </tbody>
 DPM_TILE;
 ?>
-<link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.16.1">
-<script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.16.1" defer></script>
+<link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.16.2">
+<script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.16.2" defer></script>

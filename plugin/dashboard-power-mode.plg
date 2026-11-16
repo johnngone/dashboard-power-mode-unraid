@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.16.1" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues" icon="fa-bolt">
+<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.16.2" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues" icon="fa-bolt">
   <CHANGES>Place adjustment controls below the existing Processor display.
 Add sampled GHz readings in one column per core load row.
 Hardware detection, persistent settings, and Tips and Tweaks conflict detection.
@@ -12,7 +12,7 @@ Hardware detection, persistent settings, and Tips and Tweaks conflict detection.
 $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
 &lt;tbody id="dashboard-power-mode" title="_(Power Mode)_"&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span class="tile-header"&gt;&lt;span class="tile-header-left"&gt;
-&lt;h3 class="tile-header-main dpm-heading"&gt;&lt;span data-dpm="hardware"&gt;CPU adjustment&lt;/span&gt;&lt;span class="dpm-conflict" data-dpm="conflict" hidden&gt; (Note: Tips &amp;amp; Tweaks plugin may override)&lt;/span&gt;&lt;/h3&gt;&lt;/span&gt;
+&lt;h3 class="tile-header-main dpm-heading"&gt;&lt;strong&gt;Tuning&lt;/strong&gt;&lt;span class="dpm-conflict"&gt; (&lt;span data-dpm="hardware"&gt;via CPU frequency driver&lt;/span&gt;&lt;span data-dpm="conflict" hidden&gt;; may be overridden by Tips &amp;amp; Tweaks Plugin&lt;/span&gt;)&lt;/span&gt;&lt;/h3&gt;&lt;/span&gt;
 &lt;span class="tile-header-right"&gt;&lt;span class="tile-header-right-controls"&gt;&lt;span class="dpm-saving" data-dpm="saving" role="status" aria-live="polite" hidden&gt;Saving…&lt;/span&gt;&lt;button type="button" class="dpm-refresh" data-dpm="refresh" title="Refresh" aria-label="Refresh"&gt;&lt;svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"&gt;&lt;path d="M20 7v5h-5M20 12a8 8 0 1 0-2.3 5.7"/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;
 &lt;div class="dpm-body"&gt;
@@ -29,10 +29,10 @@ $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
 &lt;/tbody&gt;
 DPM_TILE;
 ?&gt;
-&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.16.1"&gt;
-&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.16.1" defer&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.16.2"&gt;
+&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.16.2" defer&gt;&lt;/script&gt;
 </INLINE>
-    <SHA256>b67d6410d900a1ee07447588be9821bf3b7d0a3bd7490f72857aac63aecddcf6</SHA256>
+    <SHA256>4d2060524b024a47cff498be01a7563bb90fc1cbdbefa70e6118c250158277f7</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/README.md" Mode="0644">
     <INLINE>**Dashboard Power Mode**
@@ -573,7 +573,7 @@ final class PowerControl
     const message = (text) =&gt; { el('message').textContent = text; el('message').hidden = !text; };
     function render(next) {
       state = next;
-      el('hardware').textContent = next.drivers.length ? `${next.drivers.join(', ')} adjustment` : 'CPU adjustment';
+      el('hardware').textContent = next.drivers.length ? `via ${next.drivers.join(', ')}` : 'via CPU frequency driver';
       el('governor').replaceChildren();
       if (next.governor === null) el('governor').add(new Option('Mixed / unavailable', '', true, true));
       next.governors.forEach((governor) =&gt; el('governor').add(new Option(governor, governor, false, next.governor === governor)));
@@ -729,7 +729,7 @@ final class PowerControl
   else init();
 })();
 </INLINE>
-    <SHA256>a2b20b0faa2a7d1fd4554c9c1fe2aa6d0f924ba94a4c3029f0f80bf9619b8b13</SHA256>
+    <SHA256>ec82051ba328232af18975cfaacfb5ffccfc6e5279f67d919d01c5e995fd8af8</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/scripts/power-mode" Mode="0755">
     <INLINE>#!/usr/bin/php
@@ -757,7 +757,7 @@ try {
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/styles/power-mode.css" Mode="0644">
     <INLINE>/* SPDX-License-Identifier: GPL-2.0-only */
-#dashboard-power-mode .dpm-body { padding: 4px 4px 0; white-space: normal; }
+#dashboard-power-mode .dpm-body { padding: 4px 4px 6px; white-space: normal; }
 #dashboard-power-mode button { cursor: pointer; margin: 0; }
 #dashboard-power-mode button:disabled { cursor: default; }
 #dashboard-power-mode .tile-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
@@ -787,10 +787,10 @@ try {
 .dpm-cpu-metric &gt; .usage-disk { flex: 1 1 auto; min-width: 10px; width: auto !important; margin: 0 !important; }
 .dpm-cpu-ghz { flex: 0 0 8ch; font-size: 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-#dashboard-power-mode [data-dpm="hardware"] { font-weight: bold; }
+#dashboard-power-mode .dpm-heading strong { font-weight: bold; }
 .dpm-adjustments-row &gt; td { padding-bottom: 0 !important; }
 </INLINE>
-    <SHA256>f31a15d18a247fb0e83a7913ca5bc39418f0dba800c1c3f47edd18cc6957bffa</SHA256>
+    <SHA256>fd01a23277ceeca75eae5b0f619021246d4c53b23155334c62e17c71d3c453eb</SHA256>
   </FILE>
   <FILE Run="/bin/bash" Method="install">
     <INLINE>#!/bin/bash
