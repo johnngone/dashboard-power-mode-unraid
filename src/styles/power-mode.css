@@ -23,8 +23,8 @@
 #dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
 #dashboard-power-mode [hidden] { display: none !important; }
 .dpm-cpu-row { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1.5fr) minmax(0,1.5fr); gap: 6px; align-items: center; }
-.dpm-cpu-row > span { width: auto !important; min-width: 0; }
+.dpm-cpu-row > span { width: auto !important; max-width: none !important; min-width: 0; justify-self: stretch; }
 .dpm-cpu-row > .dpm-cpu-metric { display: inline-flex; align-items: center; gap: 4px; }
-.dpm-cpu-metric > .load { flex: 0 0 3ch; width: 3ch !important; }
-.dpm-cpu-metric > .usage-disk { flex: 1 1 auto; min-width: 10px; width: auto !important; }
+.dpm-cpu-metric > .load { flex: 0 0 4ch; width: 4ch !important; min-width: 0; }
+.dpm-cpu-metric > .usage-disk { flex: 1 1 auto; min-width: 10px; width: auto !important; margin: 0 !important; }
 .dpm-cpu-ghz { flex: 0 0 8ch; font-size: 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }

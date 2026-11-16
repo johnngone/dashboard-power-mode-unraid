@@ -73,7 +73,7 @@ with sync_playwright() as p:
     page.goto('http://power-mode.test/')
     page.evaluate("window.csrf_token = 'synthetic-test-token'")
     page.add_style_tag(path=str(ROOT / 'src/styles/power-mode.css'))
-    page.add_style_tag(content='body { margin: 12px; background:#f6f7f8; color:#25282b; font:14px Arial,sans-serif; } table { width:100%; } select { width:100%; min-width:300px; } button,select { padding:8px; border:1px solid #aaa; border-radius:3px; background:transparent; color:inherit; } h3 { margin:6px 0; } .usage-disk { height:7px; background:#bbb; }')
+    page.add_style_tag(content='body { margin: 12px; background:#f6f7f8; color:#25282b; font:14px Arial,sans-serif; } table { width:100%; } select { width:100%; min-width:300px; } button,select { padding:8px; border:1px solid #aaa; border-radius:3px; background:transparent; color:inherit; } h3 { margin:6px 0; } .usage-disk { height:7px; background:#bbb; } .w26 { max-width:26%; } .w36 { max-width:36%; } .usage-disk.sys { margin:-14px 20px 0 44px; }')
     page.add_script_tag(path=str(ROOT / 'src/javascript/power-mode.js'))
     card = page.locator('#dashboard-power-mode')
     message = card.locator('[data-dpm="message"]')
@@ -104,6 +104,9 @@ with sync_playwright() as p:
         box = card.locator('[data-dpm="governor"]').evaluate('el => { const s=el.getBoundingClientRect(), r=el.parentElement.getBoundingClientRect(); return { width:s.width, rowWidth:r.width, right:s.right, rowRight:r.right }; }')
         assert abs(box['width'] - box['rowWidth'] / 2) <= 1
         assert abs(box['right'] - box['rowRight']) <= 1
+        for metric in page.locator('.dpm-cpu-metric').all():
+            bounds = metric.evaluate('el => {const r=el.getBoundingClientRect(),l=el.querySelector(".dpm-cpu-ghz").getBoundingClientRect(); return {right:r.right,label:l.right,bar:el.querySelector(".usage-disk").getBoundingClientRect().width};}')
+            assert bounds['label'] <= bounds['right'] + 1 and bounds['bar'] >= 10, bounds
     # Capture a privacy-safe preview before changing the synthetic state.
     if args.screenshot:
         (ROOT / 'docs').mkdir(exist_ok=True)

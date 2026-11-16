@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.6" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues" icon="fa-bolt">
+<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.7" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues" icon="fa-bolt">
   <CHANGES>Place adjustment controls below the existing Processor display.
 Add sampled GHz readings alongside each CPU load bar.
 Hardware detection, persistent settings, and Tips and Tweaks conflict detection.
@@ -29,10 +29,10 @@ $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
 &lt;/tbody&gt;
 DPM_TILE;
 ?&gt;
-&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.6"&gt;
-&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.6" defer&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.7"&gt;
+&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.7" defer&gt;&lt;/script&gt;
 </INLINE>
-    <SHA256>146250d00a78df799516609dbfd4e94188f9340fb5152d68dbf91773b38e754d</SHA256>
+    <SHA256>3aa9e6a79ad812c5afe41e2f215856fd6cf0fa0e4490fc56ea5f625d4abe1ac9</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/README.md" Mode="0644">
     <INLINE>**Dashboard Power Mode**
@@ -777,13 +777,13 @@ try {
 #dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
 #dashboard-power-mode [hidden] { display: none !important; }
 .dpm-cpu-row { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1.5fr) minmax(0,1.5fr); gap: 6px; align-items: center; }
-.dpm-cpu-row &gt; span { width: auto !important; min-width: 0; }
+.dpm-cpu-row &gt; span { width: auto !important; max-width: none !important; min-width: 0; justify-self: stretch; }
 .dpm-cpu-row &gt; .dpm-cpu-metric { display: inline-flex; align-items: center; gap: 4px; }
-.dpm-cpu-metric &gt; .load { flex: 0 0 3ch; width: 3ch !important; }
-.dpm-cpu-metric &gt; .usage-disk { flex: 1 1 auto; min-width: 10px; width: auto !important; }
+.dpm-cpu-metric &gt; .load { flex: 0 0 4ch; width: 4ch !important; min-width: 0; }
+.dpm-cpu-metric &gt; .usage-disk { flex: 1 1 auto; min-width: 10px; width: auto !important; margin: 0 !important; }
 .dpm-cpu-ghz { flex: 0 0 8ch; font-size: 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 </INLINE>
-    <SHA256>b2289d8c25af04d7f26223f17f9a0f8abfb7e5f7323f9c4b3d1d298b2a1e8eda</SHA256>
+    <SHA256>2d77d9fc0d8cf92f5de4e98604d7f1df87c13135ced336f1cb08b13099895280</SHA256>
   </FILE>
   <FILE Run="/bin/bash" Method="install">
     <INLINE>#!/bin/bash

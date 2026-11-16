@@ -22,5 +22,5 @@ $mytiles['dashboard-power-mode']['column1'] = <<<'DPM_TILE'
 </tbody>
 DPM_TILE;
 ?>
-<link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.6">
-<script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.6" defer></script>
+<link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.7">
+<script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.7" defer></script>
