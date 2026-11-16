@@ -18,7 +18,9 @@
         while (cell?.firstChild) section.append(cell.firstChild);
       });
       const row = document.createElement('tr');
-      row.className = 'dpm-adjustments-row';
+      row.className = 'dpm-adjustments-row cpu_open';
+      const detail = processor.querySelector('tr.cpu_open');
+      if (detail && getComputedStyle(detail).display === 'none') row.style.display = 'none';
       const cell = document.createElement('td');
       cell.append(section);
       row.append(cell);
@@ -43,18 +45,20 @@
         if (!cpuClass) return;
         const metric = load.parentElement;
         metric.classList.add('dpm-cpu-metric');
-        const label = document.createElement('span');
-        label.className = 'dpm-cpu-ghz';
-        label.dataset.cpu = cpuClass.slice(3);
-        label.textContent = '— GHz';
-        label.title = `CPU ${label.dataset.cpu} sampled frequency`;
-        metric.append(label);
-        frequencyLabels.push(label);
         metrics.push(metric);
       });
       if (metrics.length) {
         row.cells[0].classList.add('dpm-cpu-row');
         if (metrics.length === 1) metrics[0].style.gridColumn = 'span 2';
+        const load = metrics[0].querySelector('.load.resize');
+        const cpuClass = Array.from(load.classList).find((name) => /^cpu\d+$/.test(name));
+        const label = document.createElement('span');
+        label.className = 'dpm-cpu-ghz';
+        label.dataset.cpu = cpuClass.slice(3);
+        label.textContent = '\u2014 GHz';
+        label.title = 'Sampled core frequency';
+        row.cells[0].append(label);
+        frequencyLabels.push(label);
       }
     });
     const mhz = (khz) => `${(khz / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 })} MHz`;

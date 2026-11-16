@@ -86,7 +86,7 @@ with sync_playwright() as p:
     assert not posts
     expect(message).to_be_hidden()
     notice = card.locator('[data-dpm="conflict"]')
-    expect(notice).to_have_text('(Tips & Tweaks plugin may override)')
+    expect(notice).to_have_text('(Note: Tips & Tweaks plugin may override)')
     expect(notice).to_be_visible()
     assert card.locator('.dpm-heading [data-dpm="conflict"]').count() == 1
     assert card.locator('.tile-header-right-controls [data-dpm="refresh"]').count() == 1
@@ -95,7 +95,8 @@ with sync_playwright() as p:
     assert card.evaluate('el => el.closest("tbody").id') == 'synthetic-processor'
     assert page.locator('tbody#dashboard-power-mode').count() == 0
     expect(page.locator('.dpm-cpu-ghz[data-cpu="0"]')).to_have_text('1.20 GHz')
-    expect(page.locator('.dpm-cpu-ghz[data-cpu="1"]')).to_have_text('2.40 GHz')
+    assert page.locator('.dpm-cpu-ghz').count() == 1
+    assert card.evaluate('el => el.closest("tr").classList.contains("cpu_open")')
     expect(card.locator('[data-dpm="cap-low"]')).to_have_text('800 MHz')
     expect(card.locator('[data-dpm="cap-high"]')).to_have_text('4,000 MHz')
     assert card.locator('[data-dpm="cap-info"]').count() == 0
@@ -105,8 +106,8 @@ with sync_playwright() as p:
         assert abs(box['width'] - box['rowWidth'] / 2) <= 1
         assert abs(box['right'] - box['rowRight']) <= 1
         for metric in page.locator('.dpm-cpu-metric').all():
-            bounds = metric.evaluate('el => {const r=el.getBoundingClientRect(),l=el.querySelector(".dpm-cpu-ghz").getBoundingClientRect(); return {right:r.right,label:l.right,bar:el.querySelector(".usage-disk").getBoundingClientRect().width};}')
-            assert bounds['label'] <= bounds['right'] + 1 and bounds['bar'] >= 10, bounds
+            bounds = metric.evaluate('el => {const r=el.getBoundingClientRect(),l=el.parentElement.querySelector(".dpm-cpu-ghz").getBoundingClientRect(); return {right:r.right,label:l.right,bar:el.querySelector(".usage-disk").getBoundingClientRect().width};}')
+            assert bounds['label'] >= bounds['right'] - 1 and bounds['bar'] >= 10, bounds
     # Capture a privacy-safe preview before changing the synthetic state.
     if args.screenshot:
         (ROOT / 'docs').mkdir(exist_ok=True)
@@ -115,12 +116,13 @@ with sync_playwright() as p:
     samples['0'] = 1800000
     card.locator('[data-dpm="refresh"]').click()
     expect(page.locator('.dpm-cpu-ghz[data-cpu="0"]')).to_have_text('1.80 GHz')
-    page.locator('.cpu_open').evaluate('el => el.style.display = "none"')
+    page.locator('.cpu_open').evaluate_all('rows => rows.forEach(el => el.style.display = "none")')
+    expect(card).to_be_hidden()
     count = frequency_requests
-    card.locator('[data-dpm="refresh"]').click()
-    page.wait_for_timeout(100)
+    page.wait_for_timeout(3200)
     assert frequency_requests == count, 'Hidden CPU details must not fetch frequency samples'
-    page.locator('.cpu_open').evaluate('el => el.style.display = ""')
+    page.locator('.cpu_open').evaluate_all('rows => rows.forEach(el => el.style.display = "")')
+    expect(card).to_be_visible()
 
     state['tips_conflict'] = False
     card.locator('[data-dpm="refresh"]').click()

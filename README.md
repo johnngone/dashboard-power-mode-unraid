@@ -1,6 +1,6 @@
 # Dashboard Power Mode (Unraid Plugin)
 
-An Unraid plugin that adds **power controls below the Processor display**, with governor selection, a Turbo Boost checkbox, a maximum CPU frequency slider, and sampled GHz values beside each CPU load bar.
+An Unraid plugin that adds **power controls below the Processor display**, with governor selection, a Turbo Boost checkbox, a maximum CPU frequency slider, and one sampled GHz column at the right of each core load row.
 
 Repository: https://github.com/johnngone/dashboard-power-mode-unraid
 

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
-#dashboard-power-mode .dpm-body { padding: 4px 4px 10px; white-space: normal; }
+#dashboard-power-mode .dpm-body { padding: 4px 4px 0; white-space: normal; }
 #dashboard-power-mode button { cursor: pointer; margin: 0; }
 #dashboard-power-mode button:disabled { cursor: default; }
 #dashboard-power-mode .tile-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
@@ -11,7 +11,7 @@
 #dashboard-power-mode .dpm-refresh { display: inline-flex; align-items: center; justify-content: center; width: 26px; min-width: 0; height: 26px; padding: 4px; border: 0; background: transparent; color: inherit; box-shadow: none; }
 #dashboard-power-mode .dpm-refresh:disabled { opacity: .5; }
 #dashboard-power-mode.dpm-adjustments { border-top: 1px solid rgba(128,128,128,.3); margin-top: 8px; padding-top: 10px; }
-#dashboard-power-mode .dpm-heading { margin: 0; font-size: 14px; line-height: 1.5; text-transform: none; white-space: normal; }
+#dashboard-power-mode .dpm-heading { margin: 0; font-size: 12px; font-weight: normal; line-height: 1.5; text-transform: none; white-space: normal; }
 #dashboard-power-mode .dpm-conflict { font-size: 12px; font-weight: normal; opacity: .7; }
 #dashboard-power-mode .dpm-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 #dashboard-power-mode select { max-width: 100%; margin: 0; min-width: 130px; }
@@ -22,9 +22,12 @@
 #dashboard-power-mode .dpm-limits { display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5; }
 #dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
 #dashboard-power-mode [hidden] { display: none !important; }
-.dpm-cpu-row { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1.5fr) minmax(0,1.5fr); gap: 6px; align-items: center; }
+.dpm-cpu-row { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1.5fr) minmax(0,1.5fr) 8ch; gap: 6px; align-items: center; }
 .dpm-cpu-row > span { width: auto !important; max-width: none !important; min-width: 0; justify-self: stretch; }
 .dpm-cpu-row > .dpm-cpu-metric { display: inline-flex; align-items: center; gap: 4px; }
 .dpm-cpu-metric > .load { flex: 0 0 4ch; width: 4ch !important; min-width: 0; }
 .dpm-cpu-metric > .usage-disk { flex: 1 1 auto; min-width: 10px; width: auto !important; margin: 0 !important; }
 .dpm-cpu-ghz { flex: 0 0 8ch; font-size: 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+#dashboard-power-mode [data-dpm="hardware"] { font-weight: bold; }
+.dpm-adjustments-row > td { padding-bottom: 0 !important; }
