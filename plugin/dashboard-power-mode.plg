@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.4" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues">
-  <CHANGES>Move Refresh into the dashboard tile header controls.
-Replace the warning block with a quiet inline Tips &amp; Tweaks notice.
+<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.5" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues" icon="fa-bolt">
+  <CHANGES>Show saving status beside Refresh without resizing the tile.
+Use the dashboard thunderbolt icon in the plugin list.
 Hardware detection, persistent settings, and Tips and Tweaks conflict detection.
 </CHANGES>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/DashboardPowerMode.page" Mode="0644">
@@ -14,7 +14,7 @@ $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
 &lt;tr&gt;&lt;td&gt;&lt;span class="tile-header"&gt;&lt;span class="tile-header-left"&gt;
 &lt;i class="fa fa-bolt f32"&gt;&lt;/i&gt;&lt;div class="section"&gt;&lt;h3 class="tile-header-main"&gt;_(Power Mode)_&lt;/h3&gt;
 &lt;span class="dpm-meta"&gt;&lt;span data-dpm="hardware"&gt;Loading CPU controls…&lt;/span&gt;&lt;span class="dpm-conflict" data-dpm="conflict" hidden&gt;Tips &amp;amp; Tweaks Plugin may override these settings.&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;/span&gt;
-&lt;span class="tile-header-right"&gt;&lt;span class="tile-header-right-controls"&gt;&lt;button type="button" class="dpm-refresh" data-dpm="refresh" title="Refresh" aria-label="Refresh"&gt;&lt;svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"&gt;&lt;path d="M20 7v5h-5M20 12a8 8 0 1 0-2.3 5.7"/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;span class="tile-header-right"&gt;&lt;span class="tile-header-right-controls"&gt;&lt;span class="dpm-saving" data-dpm="saving" role="status" aria-live="polite" hidden&gt;Saving…&lt;/span&gt;&lt;button type="button" class="dpm-refresh" data-dpm="refresh" title="Refresh" aria-label="Refresh"&gt;&lt;svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"&gt;&lt;path d="M20 7v5h-5M20 12a8 8 0 1 0-2.3 5.7"/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;
 &lt;div class="dpm-body"&gt;
   &lt;div class="dpm-row"&gt;&lt;label for="dpm-governor"&gt;Governor&lt;/label&gt;&lt;select id="dpm-governor" data-dpm="governor" disabled&gt;&lt;/select&gt;&lt;/div&gt;
@@ -30,10 +30,10 @@ $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
 &lt;/tbody&gt;
 DPM_TILE;
 ?&gt;
-&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.4"&gt;
-&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.4" defer&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.5"&gt;
+&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.5" defer&gt;&lt;/script&gt;
 </INLINE>
-    <SHA256>112664f4e7c1bf3a39c1dddb3531ab9e25fa72929bc1ab84c3c89d53762bdab0</SHA256>
+    <SHA256>79f8994124838e70599c3588ba65b83c4a136ed5931916046f10e48234f2389d</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/README.md" Mode="0644">
     <INLINE>**Dashboard Power Mode**
@@ -595,7 +595,8 @@ final class PowerControl
       sliding = false;
       revision++;
       root.querySelectorAll('button, select, input').forEach((control) =&gt; { control.disabled = true; });
-      message('Saving…');
+      message('');
+      el('saving').hidden = false;
       try {
         const next = await request(body);
         busy = false;
@@ -605,6 +606,8 @@ final class PowerControl
         busy = false;
         try { render(await request()); } catch (_) { if (state) render(state); }
         message(error.message);
+      } finally {
+        el('saving').hidden = true;
       }
     }
     refresh();
@@ -618,7 +621,7 @@ final class PowerControl
   else init();
 })();
 </INLINE>
-    <SHA256>6561972fe2fc5690aa66c2b2bda2d3e6dedec70603be12ca2dfdca05a942ba65</SHA256>
+    <SHA256>c2d1bf108302cdfb43ca9c57244083ca22cb436376af19b80cafb295ae51c887</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/scripts/power-mode" Mode="0755">
     <INLINE>#!/usr/bin/php
@@ -652,6 +655,9 @@ try {
 #dashboard-power-mode .tile-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 #dashboard-power-mode .tile-header-left { flex: 1; min-width: 0; }
 #dashboard-power-mode .tile-header-right { flex-shrink: 0; margin-left: auto; }
+#dashboard-power-mode .tile-header-right-controls { display: inline-flex; align-items: center; gap: 6px; }
+#dashboard-power-mode .dpm-saving { display: inline-block; font-size: 12px; font-weight: normal; white-space: nowrap; }
+#dashboard-power-mode .dpm-saving[hidden] { display: inline-block !important; visibility: hidden; }
 #dashboard-power-mode .dpm-refresh { display: inline-flex; align-items: center; justify-content: center; width: 26px; min-width: 0; height: 26px; padding: 4px; border: 0; background: transparent; color: inherit; box-shadow: none; }
 #dashboard-power-mode .dpm-refresh:disabled { opacity: .5; }
 #dashboard-power-mode .dpm-meta { white-space: normal; }
@@ -666,7 +672,7 @@ try {
 #dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
 #dashboard-power-mode [hidden] { display: none !important; }
 </INLINE>
-    <SHA256>78495e4f2667d69ba83ba9693af07f224e866a229b9876cd7935d39ca74b2862</SHA256>
+    <SHA256>92cda437cf4c90a42c3d5e0ac513e2e23de00f0f3926fbac66d7e8dab9fa066e</SHA256>
   </FILE>
   <FILE Run="/bin/bash" Method="install">
     <INLINE>#!/bin/bash

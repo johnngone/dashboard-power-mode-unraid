@@ -5,6 +5,9 @@
 #dashboard-power-mode .tile-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 #dashboard-power-mode .tile-header-left { flex: 1; min-width: 0; }
 #dashboard-power-mode .tile-header-right { flex-shrink: 0; margin-left: auto; }
+#dashboard-power-mode .tile-header-right-controls { display: inline-flex; align-items: center; gap: 6px; }
+#dashboard-power-mode .dpm-saving { display: inline-block; font-size: 12px; font-weight: normal; white-space: nowrap; }
+#dashboard-power-mode .dpm-saving[hidden] { display: inline-block !important; visibility: hidden; }
 #dashboard-power-mode .dpm-refresh { display: inline-flex; align-items: center; justify-content: center; width: 26px; min-width: 0; height: 26px; padding: 4px; border: 0; background: transparent; color: inherit; box-shadow: none; }
 #dashboard-power-mode .dpm-refresh:disabled { opacity: .5; }
 #dashboard-power-mode .dpm-meta { white-space: normal; }

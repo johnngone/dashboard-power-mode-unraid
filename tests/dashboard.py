@@ -22,6 +22,8 @@ state = {
 }
 posts = []
 reject = False
+hold = False
+pending = []
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
@@ -32,6 +34,9 @@ with sync_playwright() as p:
     def api(route):
         global reject
         if route.request.method == 'POST':
+            if hold:
+                pending.append(route)
+                return
             fields = {key: values[0] for key, values in parse_qs(route.request.post_data).items()}
             posts.append(fields)
             assert fields.pop('csrf_token') == 'synthetic-test-token'
@@ -98,8 +103,23 @@ with sync_playwright() as p:
     card.locator('[data-dpm="governor"]').select_option('ondemand')
     page.wait_for_timeout(30)
     assert not posts, 'Selecting the current value must not write to flash'
+    hold = True
+    before = card.bounding_box()
     card.locator('[data-dpm="governor"]').select_option('performance')
+    saving = card.locator('[data-dpm="saving"]')
+    expect(saving).to_be_visible()
+    during = card.bounding_box()
+    assert abs(before['height'] - during['height']) < 1, 'Saving must not resize the tile'
+    save_box = saving.bounding_box()
+    refresh_box = card.locator('[data-dpm="refresh"]').bounding_box()
+    assert save_box['x'] + save_box['width'] <= refresh_box['x']
+    expect(message).to_be_hidden()
+    assert len(pending) == 1
+    hold = False
+    api(pending.pop())
     expect(card.locator('[data-dpm="governor"]')).to_be_enabled()
+    expect(saving).to_be_hidden()
+    assert abs(before['height'] - card.bounding_box()['height']) < 1
     expect(message).to_be_hidden()
     assert posts[-1] == {'governor': 'performance'}
     expect(card.locator('[data-dpm="cap"]')).to_have_attribute('min', '1300')

@@ -123,7 +123,8 @@
       sliding = false;
       revision++;
       root.querySelectorAll('button, select, input').forEach((control) => { control.disabled = true; });
-      message('Saving…');
+      message('');
+      el('saving').hidden = false;
       try {
         const next = await request(body);
         busy = false;
@@ -133,6 +134,8 @@
         busy = false;
         try { render(await request()); } catch (_) { if (state) render(state); }
         message(error.message);
+      } finally {
+        el('saving').hidden = true;
       }
     }
     refresh();

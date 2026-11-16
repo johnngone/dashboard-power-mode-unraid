@@ -13,6 +13,7 @@ for entry in files:
     assert installed == expected.read_bytes(), expected
     assert hashlib.sha256(installed).hexdigest() == entry.findtext('SHA256'), expected
 assert plugin.get('min') == '7.0.0'
+assert plugin.get('icon') == 'fa-bolt'
 assert not plugin.findall('.//URL'), 'Plugin must boot without network downloads'
 assert not any('tips.and.tweaks' in entry.get('Name', '') for entry in files)
 assert {entry.get('Method') for entry in plugin.findall('FILE') if entry.get('Run')} == {'install', 'remove'}

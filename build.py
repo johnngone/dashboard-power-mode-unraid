@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent
 NAME = 'dashboard-power-mode'
-VERSION = '2026.11.15.4'
+VERSION = '2026.11.15.5'
 TARGET = f'/usr/local/emhttp/plugins/{NAME}'
 URL = f'https://raw.githubusercontent.com/johnngone/{NAME}-unraid/main/plugin/{NAME}.plg'
 
@@ -21,11 +21,11 @@ def inline(parent, content, **attributes):
 def build():
     plugin = ET.Element('PLUGIN', {
         'name': NAME, 'author': 'johnngone', 'version': VERSION, 'min': '7.0.0',
-        'pluginURL': URL, 'support': f'https://github.com/johnngone/{NAME}-unraid/issues',
+        'pluginURL': URL, 'support': f'https://github.com/johnngone/{NAME}-unraid/issues', 'icon': 'fa-bolt',
     })
     ET.SubElement(plugin, 'CHANGES').text = (
-        'Move Refresh into the dashboard tile header controls.\n'
-        'Replace the warning block with a quiet inline Tips & Tweaks notice.\n'
+        'Show saving status beside Refresh without resizing the tile.\n'
+        'Use the dashboard thunderbolt icon in the plugin list.\n'
         'Hardware detection, persistent settings, and Tips and Tweaks conflict detection.\n'
     )
     # pathlib orders paths case-insensitively on Windows. Use explicit POSIX
