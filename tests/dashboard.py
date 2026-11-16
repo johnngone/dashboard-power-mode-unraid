@@ -25,7 +25,7 @@ reject = False
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
-    page = browser.new_page(viewport={'width': 640, 'height': 850})
+    page = browser.new_page(viewport={'width': 640, 'height': 850}, locale='en-US')
     errors = []
     page.on('pageerror', lambda error: errors.append(str(error)))
 
@@ -56,7 +56,7 @@ with sync_playwright() as p:
     page.goto('http://power-mode.test/')
     page.evaluate("window.csrf_token = 'synthetic-test-token'")
     page.add_style_tag(path=str(ROOT / 'src/styles/power-mode.css'))
-    page.add_style_tag(content='body { margin: 12px; background:#f6f7f8; color:#25282b; font:14px Arial,sans-serif; } table { width:100%; } button,select { padding:8px; border:1px solid #aaa; border-radius:3px; background:transparent; color:inherit; } h3 { margin:6px 0; }')
+    page.add_style_tag(content='body { margin: 12px; background:#f6f7f8; color:#25282b; font:14px Arial,sans-serif; } table { width:100%; } select { width:100%; min-width:300px; } button,select { padding:8px; border:1px solid #aaa; border-radius:3px; background:transparent; color:inherit; } h3 { margin:6px 0; }')
     page.add_script_tag(path=str(ROOT / 'src/javascript/power-mode.js'))
     card = page.locator('#dashboard-power-mode')
     message = card.locator('[data-dpm="message"]')
@@ -67,6 +67,16 @@ with sync_playwright() as p:
     expect(card.locator('[data-dpm="cap"]')).to_have_attribute('step', '100')
     assert card.locator('[data-dpm="cap-ticks"] option').count() == 33
     assert not posts
+    expect(message).to_be_hidden()
+    expect(card.locator('[data-dpm="hardware"]')).to_contain_text('2 CPUs')
+    expect(card.locator('[data-dpm="cap-low"]')).to_have_text('800 MHz')
+    expect(card.locator('[data-dpm="cap-high"]')).to_have_text('4,000 MHz')
+    assert card.locator('[data-dpm="cap-info"]').count() == 0
+    for width in (375, 640):
+        page.set_viewport_size({'width': width, 'height': 850})
+        box = card.locator('[data-dpm="governor"]').evaluate('el => { const s=el.getBoundingClientRect(), r=el.parentElement.getBoundingClientRect(); return { width:s.width, rowWidth:r.width, right:s.right, rowRight:r.right }; }')
+        assert abs(box['width'] - box['rowWidth'] / 2) <= 1
+        assert abs(box['right'] - box['rowRight']) <= 1
     # Capture a privacy-safe preview before changing the synthetic state.
     if args.screenshot:
         (ROOT / 'docs').mkdir(exist_ok=True)
@@ -76,12 +86,14 @@ with sync_playwright() as p:
     page.wait_for_timeout(30)
     assert not posts, 'Selecting the current value must not write to flash'
     card.locator('[data-dpm="governor"]').select_option('performance')
-    expect(message).to_contain_text('Applied and saved')
+    expect(card.locator('[data-dpm="governor"]')).to_be_enabled()
+    expect(message).to_be_hidden()
     assert posts[-1] == {'governor': 'performance'}
     expect(card.locator('[data-dpm="cap"]')).to_have_attribute('min', '1300')
     expect(card.locator('[data-dpm="cap"]')).to_have_attribute('max', '2800')
+    expect(card.locator('[data-dpm="cap-low"]')).to_have_text('1,300 MHz')
+    expect(card.locator('[data-dpm="cap-high"]')).to_have_text('2,800 MHz')
     card.locator('[data-dpm="governor"]').select_option('powersave')
-    expect(message).to_contain_text('Applied and saved')
     expect(card.locator('[data-dpm="governor"]')).to_be_enabled()
     assert posts[-1] == {'governor': 'powersave'}
     card.locator('[data-dpm="turbo"]').uncheck()
@@ -119,7 +131,7 @@ with sync_playwright() as p:
     state['frequency'].update(min_khz=1250000, max_khz=1290000, cap_khz=1270000)
     card.locator('[data-dpm="refresh"]').click()
     expect(card.locator('[data-dpm="cap"]')).to_be_disabled()
-    expect(card.locator('[data-dpm="cap-info"]')).to_contain_text('No 100 MHz step')
+    expect(card.locator('[data-dpm="cap"]')).to_have_attribute('title', re.compile('No 100 MHz step'))
     state['frequency'].update(min_khz=800000, max_khz=4000000, cap_khz=2000000)
     state['turbo']['supported'] = False
     card.locator('[data-dpm="refresh"]').click()

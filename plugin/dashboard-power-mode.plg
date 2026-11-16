@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.2" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues">
-  <CHANGES>Use a Turbo Boost checkbox and a frequency slider with 100 MHz notches.
-Remove redundant power preset buttons; refresh limits after each change.
+<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.3" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues">
+  <CHANGES>Right-align a half-width governor selector and simplify CPU labels.
+Show slider endpoint values without idle explanatory text.
 Hardware detection, persistent settings, and Tips and Tweaks conflict detection.
 </CHANGES>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/DashboardPowerMode.page" Mode="0644">
@@ -19,22 +19,22 @@ $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
   &lt;div class="dpm-row"&gt;&lt;label for="dpm-governor"&gt;Governor&lt;/label&gt;&lt;select id="dpm-governor" data-dpm="governor" disabled&gt;&lt;/select&gt;&lt;/div&gt;
   &lt;div class="dpm-row"&gt;&lt;label for="dpm-turbo"&gt;Turbo Boost&lt;/label&gt;&lt;span class="dpm-toggle"&gt;&lt;input id="dpm-turbo" data-dpm="turbo" type="checkbox" disabled aria-describedby="dpm-turbo-status"&gt;&lt;span id="dpm-turbo-status" data-dpm="turbo-status"&gt;Unavailable&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;
   &lt;div class="dpm-row"&gt;&lt;label for="dpm-cap"&gt;Maximum frequency&lt;/label&gt;&lt;output for="dpm-cap" data-dpm="cap-label"&gt;Unavailable&lt;/output&gt;&lt;/div&gt;
-  &lt;input id="dpm-cap" data-dpm="cap" type="range" min="0" max="0" step="100" list="dpm-cap-ticks" disabled aria-describedby="dpm-cap-info"&gt;
+  &lt;input id="dpm-cap" data-dpm="cap" type="range" min="0" max="0" step="100" list="dpm-cap-ticks" disabled aria-describedby="dpm-cap-limits"&gt;
   &lt;datalist id="dpm-cap-ticks" data-dpm="cap-ticks"&gt;&lt;/datalist&gt;
-  &lt;p id="dpm-cap-info" class="dpm-note" data-dpm="cap-info"&gt;Detecting the hardware frequency range.&lt;/p&gt;
+  &lt;div id="dpm-cap-limits" class="dpm-limits"&gt;&lt;span data-dpm="cap-low"&gt;&lt;/span&gt;&lt;span data-dpm="cap-high"&gt;&lt;/span&gt;&lt;/div&gt;
   &lt;p class="dpm-note" data-dpm="unsupported" hidden&gt;&lt;/p&gt;
   &lt;p class="dpm-warning" data-dpm="conflict" hidden&gt;Tips and Tweaks also controls this CPU. Its settings can replace the governor and turbo setting when the array starts or a schedule runs. Its configuration has been left unchanged.&lt;/p&gt;
   &lt;div class="dpm-actions"&gt;&lt;button type="button" data-dpm="refresh"&gt;Refresh&lt;/button&gt;&lt;/div&gt;
-  &lt;p class="dpm-note" data-dpm="message" role="status" aria-live="polite"&gt;Selections apply and save automatically. Release the frequency slider to save its value.&lt;/p&gt;
+  &lt;p class="dpm-note" data-dpm="message" role="status" aria-live="polite" hidden&gt;&lt;/p&gt;
 &lt;/div&gt;
 &lt;/td&gt;&lt;/tr&gt;
 &lt;/tbody&gt;
 DPM_TILE;
 ?&gt;
-&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.2"&gt;
-&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.2" defer&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.3"&gt;
+&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.3" defer&gt;&lt;/script&gt;
 </INLINE>
-    <SHA256>0bf6e6e140b85c010385bcd5730a489a6439f32a0e6ad66736c228ec7c20f16e</SHA256>
+    <SHA256>dd7a533f98cd90ae49e0e736b8063de000af2f97c4da4edccf80ff6dd107c169</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/README.md" Mode="0644">
     <INLINE>**Dashboard Power Mode**
@@ -485,11 +485,11 @@ final class PowerControl
     let sliding = false;
     let revision = 0;
     const mhz = (khz) =&gt; `${(khz / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 })} MHz`;
-    const message = (text) =&gt; { el('message').textContent = text; };
+    const message = (text) =&gt; { el('message').textContent = text; el('message').hidden = !text; };
     function render(next) {
       state = next;
       el('hardware').textContent = next.policies.length
-        ? `${next.drivers.join(', ')} · ${next.policies.length} CPU policies` : 'CPU frequency controls unavailable';
+        ? `${next.drivers.join(', ')} · ${next.policies.length} CPUs` : 'CPU frequency controls unavailable';
       el('governor').replaceChildren();
       if (next.governor === null) el('governor').add(new Option('Mixed / unavailable', '', true, true));
       next.governors.forEach((governor) =&gt; el('governor').add(new Option(governor, governor, false, next.governor === governor)));
@@ -505,6 +505,9 @@ final class PowerControl
       const selectable = freq.supported &amp;&amp; lower &lt;= upper;
       el('cap').disabled = busy || !selectable;
       el('cap-ticks').replaceChildren();
+      el('cap-low').textContent = selectable ? mhz(lower * 1000) : '—';
+      el('cap-high').textContent = selectable ? mhz(upper * 1000) : '—';
+      el('cap').title = '';
       if (selectable) {
         el('cap').min = String(lower);
         el('cap').max = String(upper);
@@ -513,10 +516,9 @@ final class PowerControl
           el('cap-ticks').append(new Option('', String(tick)));
         }
         el('cap-label').textContent = freq.cap_khz === null ? 'Mixed' : mhz(freq.cap_khz);
-        el('cap-info').textContent = `${mhz(freq.min_khz)}–${mhz(freq.max_khz)} hardware range. Adjust in 100 MHz steps. The range updates after each change.`;
       } else {
         el('cap-label').textContent = freq.cap_khz === null ? 'Unavailable' : mhz(freq.cap_khz);
-        el('cap-info').textContent = freq.supported
+        el('cap').title = freq.supported
           ? 'No 100 MHz step fits within the current hardware limits.'
           : 'No writable frequency ceiling with a shared range is exposed by this machine.';
       }
@@ -548,7 +550,7 @@ final class PowerControl
         // Do not overwrite edits made while the status request was in flight.
         if (busy || sliding || startedAt !== revision) return;
         render(next);
-        if (!quiet) message('Selections apply and save automatically. Release the frequency slider to save its value.');
+        if (!quiet) message('');
       } catch (error) { message(error.message); }
     }
     el('governor').addEventListener('change', () =&gt; apply('governor'));
@@ -594,12 +596,12 @@ final class PowerControl
       sliding = false;
       revision++;
       root.querySelectorAll('button, select, input').forEach((control) =&gt; { control.disabled = true; });
-      message('Applying CPU settings…');
+      message('Saving…');
       try {
         const next = await request(body);
         busy = false;
         render(next);
-        message(`Applied and saved. Effective frequency ceiling: ${next.frequency.effective_caps_khz.map(mhz).join(' / ') || 'unavailable'}.`);
+        message('');
       } catch (error) {
         busy = false;
         try { render(await request()); } catch (_) { if (state) render(state); }
@@ -617,7 +619,7 @@ final class PowerControl
   else init();
 })();
 </INLINE>
-    <SHA256>f6cbf07f1563c7a00b41b980e96cfd710e1b1d59efae6637c35e8b5adb3785a0</SHA256>
+    <SHA256>6561972fe2fc5690aa66c2b2bda2d3e6dedec70603be12ca2dfdca05a942ba65</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/scripts/power-mode" Mode="0755">
     <INLINE>#!/usr/bin/php
@@ -650,15 +652,17 @@ try {
 #dashboard-power-mode button:disabled { cursor: default; }
 #dashboard-power-mode .dpm-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 #dashboard-power-mode select { max-width: 100%; margin: 0; min-width: 130px; }
+#dashboard-power-mode #dpm-governor { flex: 0 0 50%; width: 50%; max-width: 50%; min-width: 0; margin: 0 0 0 auto; box-sizing: border-box; }
 #dashboard-power-mode .dpm-toggle { display: inline-flex; align-items: center; gap: 8px; }
 #dashboard-power-mode input[type="checkbox"] { margin: 0; accent-color: #e78d22; }
 #dashboard-power-mode input[type="range"] { display: block; width: 100%; margin: 8px 0; accent-color: #e78d22; }
+#dashboard-power-mode .dpm-limits { display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5; }
 #dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
 #dashboard-power-mode .dpm-warning { padding: 8px; border-left: 3px solid #e78d22; line-height: 1.5; margin: 10px 0; }
 #dashboard-power-mode .dpm-actions { display: flex; gap: 8px; margin-top: 12px; }
 #dashboard-power-mode [hidden] { display: none !important; }
 </INLINE>
-    <SHA256>1d03ce45e77251436ca482b0deccfdd69aaa03615de3147a9612015b36025e03</SHA256>
+    <SHA256>3937b8dd62ec79d6aed86f9ab0d7384a1eb19a6b5443c4c3eed9170250bf7665</SHA256>
   </FILE>
   <FILE Run="/bin/bash" Method="install">
     <INLINE>#!/bin/bash

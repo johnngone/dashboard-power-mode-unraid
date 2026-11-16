@@ -12,11 +12,11 @@
     let sliding = false;
     let revision = 0;
     const mhz = (khz) => `${(khz / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 })} MHz`;
-    const message = (text) => { el('message').textContent = text; };
+    const message = (text) => { el('message').textContent = text; el('message').hidden = !text; };
     function render(next) {
       state = next;
       el('hardware').textContent = next.policies.length
-        ? `${next.drivers.join(', ')} · ${next.policies.length} CPU policies` : 'CPU frequency controls unavailable';
+        ? `${next.drivers.join(', ')} · ${next.policies.length} CPUs` : 'CPU frequency controls unavailable';
       el('governor').replaceChildren();
       if (next.governor === null) el('governor').add(new Option('Mixed / unavailable', '', true, true));
       next.governors.forEach((governor) => el('governor').add(new Option(governor, governor, false, next.governor === governor)));
@@ -32,6 +32,9 @@
       const selectable = freq.supported && lower <= upper;
       el('cap').disabled = busy || !selectable;
       el('cap-ticks').replaceChildren();
+      el('cap-low').textContent = selectable ? mhz(lower * 1000) : '—';
+      el('cap-high').textContent = selectable ? mhz(upper * 1000) : '—';
+      el('cap').title = '';
       if (selectable) {
         el('cap').min = String(lower);
         el('cap').max = String(upper);
@@ -40,10 +43,9 @@
           el('cap-ticks').append(new Option('', String(tick)));
         }
         el('cap-label').textContent = freq.cap_khz === null ? 'Mixed' : mhz(freq.cap_khz);
-        el('cap-info').textContent = `${mhz(freq.min_khz)}–${mhz(freq.max_khz)} hardware range. Adjust in 100 MHz steps. The range updates after each change.`;
       } else {
         el('cap-label').textContent = freq.cap_khz === null ? 'Unavailable' : mhz(freq.cap_khz);
-        el('cap-info').textContent = freq.supported
+        el('cap').title = freq.supported
           ? 'No 100 MHz step fits within the current hardware limits.'
           : 'No writable frequency ceiling with a shared range is exposed by this machine.';
       }
@@ -75,7 +77,7 @@
         // Do not overwrite edits made while the status request was in flight.
         if (busy || sliding || startedAt !== revision) return;
         render(next);
-        if (!quiet) message('Selections apply and save automatically. Release the frequency slider to save its value.');
+        if (!quiet) message('');
       } catch (error) { message(error.message); }
     }
     el('governor').addEventListener('change', () => apply('governor'));
@@ -121,12 +123,12 @@
       sliding = false;
       revision++;
       root.querySelectorAll('button, select, input').forEach((control) => { control.disabled = true; });
-      message('Applying CPU settings…');
+      message('Saving…');
       try {
         const next = await request(body);
         busy = false;
         render(next);
-        message(`Applied and saved. Effective frequency ceiling: ${next.frequency.effective_caps_khz.map(mhz).join(' / ') || 'unavailable'}.`);
+        message('');
       } catch (error) {
         busy = false;
         try { render(await request()); } catch (_) { if (state) render(state); }

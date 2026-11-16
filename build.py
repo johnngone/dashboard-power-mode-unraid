@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent
 NAME = 'dashboard-power-mode'
-VERSION = '2026.11.15.2'
+VERSION = '2026.11.15.3'
 TARGET = f'/usr/local/emhttp/plugins/{NAME}'
 URL = f'https://raw.githubusercontent.com/johnngone/{NAME}-unraid/main/plugin/{NAME}.plg'
 
@@ -24,8 +24,8 @@ def build():
         'pluginURL': URL, 'support': f'https://github.com/johnngone/{NAME}-unraid/issues',
     })
     ET.SubElement(plugin, 'CHANGES').text = (
-        'Use a Turbo Boost checkbox and a frequency slider with 100 MHz notches.\n'
-        'Remove redundant power preset buttons; refresh limits after each change.\n'
+        'Right-align a half-width governor selector and simplify CPU labels.\n'
+        'Show slider endpoint values without idle explanatory text.\n'
         'Hardware detection, persistent settings, and Tips and Tweaks conflict detection.\n'
     )
     # pathlib orders paths case-insensitively on Windows. Use explicit POSIX
