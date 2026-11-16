@@ -30,7 +30,7 @@ Open **Dashboard** and find the **Power Mode** card. If hidden, enable it in the
 - Check or uncheck **Turbo Boost** and move the **Maximum frequency** slider as needed.
 - Selections apply and save automatically. Each control changes only its own setting.
 - The frequency slider has a notch every **100 MHz**, previews while dragging, and saves once released rather than sending requests for every movement. Its limits and notches refresh after every saved change.
-- **Refresh** reads the live settings. Live values also refresh every ten seconds when you are not editing.
+- The **Refresh** icon in the tile's top-right corner reads the live settings. Live values also refresh every ten seconds when you are not editing.
 
 The initial installation leaves CPU settings unchanged. Successfully selected values are saved to `/boot/config/plugins/dashboard-power-mode/settings.json` and restored during plugin installation at boot. Only controls you have changed are managed; unsupported controls are disabled. Controls briefly disable while a change is saving; there are no concurrent save requests or added background services.
 

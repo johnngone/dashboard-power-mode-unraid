@@ -2,6 +2,13 @@
 #dashboard-power-mode .dpm-body { padding: 4px 4px 10px; white-space: normal; }
 #dashboard-power-mode button { cursor: pointer; margin: 0; }
 #dashboard-power-mode button:disabled { cursor: default; }
+#dashboard-power-mode .tile-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+#dashboard-power-mode .tile-header-left { flex: 1; min-width: 0; }
+#dashboard-power-mode .tile-header-right { flex-shrink: 0; margin-left: auto; }
+#dashboard-power-mode .dpm-refresh { display: inline-flex; align-items: center; justify-content: center; width: 26px; min-width: 0; height: 26px; padding: 4px; border: 0; background: transparent; color: inherit; box-shadow: none; }
+#dashboard-power-mode .dpm-refresh:disabled { opacity: .5; }
+#dashboard-power-mode .dpm-meta { white-space: normal; }
+#dashboard-power-mode .dpm-conflict { margin-left: 8px; font-size: 12px; font-weight: normal; opacity: .7; }
 #dashboard-power-mode .dpm-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 #dashboard-power-mode select { max-width: 100%; margin: 0; min-width: 130px; }
 #dashboard-power-mode #dpm-governor { flex: 0 0 50%; width: 50%; max-width: 50%; min-width: 0; margin: 0 0 0 auto; box-sizing: border-box; }
@@ -10,6 +17,4 @@
 #dashboard-power-mode input[type="range"] { display: block; width: 100%; margin: 8px 0; accent-color: #e78d22; }
 #dashboard-power-mode .dpm-limits { display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5; }
 #dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
-#dashboard-power-mode .dpm-warning { padding: 8px; border-left: 3px solid #e78d22; line-height: 1.5; margin: 10px 0; }
-#dashboard-power-mode .dpm-actions { display: flex; gap: 8px; margin-top: 12px; }
 #dashboard-power-mode [hidden] { display: none !important; }

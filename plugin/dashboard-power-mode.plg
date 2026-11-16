@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.3" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues">
-  <CHANGES>Right-align a half-width governor selector and simplify CPU labels.
-Show slider endpoint values without idle explanatory text.
+<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.4" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues">
+  <CHANGES>Move Refresh into the dashboard tile header controls.
+Replace the warning block with a quiet inline Tips &amp; Tweaks notice.
 Hardware detection, persistent settings, and Tips and Tweaks conflict detection.
 </CHANGES>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/DashboardPowerMode.page" Mode="0644">
@@ -13,7 +13,8 @@ $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
 &lt;tbody id="dashboard-power-mode" title="_(Power Mode)_"&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span class="tile-header"&gt;&lt;span class="tile-header-left"&gt;
 &lt;i class="fa fa-bolt f32"&gt;&lt;/i&gt;&lt;div class="section"&gt;&lt;h3 class="tile-header-main"&gt;_(Power Mode)_&lt;/h3&gt;
-&lt;span data-dpm="hardware"&gt;Loading CPU controls…&lt;/span&gt;&lt;/div&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;span class="dpm-meta"&gt;&lt;span data-dpm="hardware"&gt;Loading CPU controls…&lt;/span&gt;&lt;span class="dpm-conflict" data-dpm="conflict" hidden&gt;Tips &amp;amp; Tweaks Plugin may override these settings.&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;/span&gt;
+&lt;span class="tile-header-right"&gt;&lt;span class="tile-header-right-controls"&gt;&lt;button type="button" class="dpm-refresh" data-dpm="refresh" title="Refresh" aria-label="Refresh"&gt;&lt;svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"&gt;&lt;path d="M20 7v5h-5M20 12a8 8 0 1 0-2.3 5.7"/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;
 &lt;div class="dpm-body"&gt;
   &lt;div class="dpm-row"&gt;&lt;label for="dpm-governor"&gt;Governor&lt;/label&gt;&lt;select id="dpm-governor" data-dpm="governor" disabled&gt;&lt;/select&gt;&lt;/div&gt;
@@ -23,18 +24,16 @@ $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
   &lt;datalist id="dpm-cap-ticks" data-dpm="cap-ticks"&gt;&lt;/datalist&gt;
   &lt;div id="dpm-cap-limits" class="dpm-limits"&gt;&lt;span data-dpm="cap-low"&gt;&lt;/span&gt;&lt;span data-dpm="cap-high"&gt;&lt;/span&gt;&lt;/div&gt;
   &lt;p class="dpm-note" data-dpm="unsupported" hidden&gt;&lt;/p&gt;
-  &lt;p class="dpm-warning" data-dpm="conflict" hidden&gt;Tips and Tweaks also controls this CPU. Its settings can replace the governor and turbo setting when the array starts or a schedule runs. Its configuration has been left unchanged.&lt;/p&gt;
-  &lt;div class="dpm-actions"&gt;&lt;button type="button" data-dpm="refresh"&gt;Refresh&lt;/button&gt;&lt;/div&gt;
   &lt;p class="dpm-note" data-dpm="message" role="status" aria-live="polite" hidden&gt;&lt;/p&gt;
 &lt;/div&gt;
 &lt;/td&gt;&lt;/tr&gt;
 &lt;/tbody&gt;
 DPM_TILE;
 ?&gt;
-&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.3"&gt;
-&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.3" defer&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.4"&gt;
+&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.4" defer&gt;&lt;/script&gt;
 </INLINE>
-    <SHA256>dd7a533f98cd90ae49e0e736b8063de000af2f97c4da4edccf80ff6dd107c169</SHA256>
+    <SHA256>112664f4e7c1bf3a39c1dddb3531ab9e25fa72929bc1ab84c3c89d53762bdab0</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/README.md" Mode="0644">
     <INLINE>**Dashboard Power Mode**
@@ -650,6 +649,13 @@ try {
 #dashboard-power-mode .dpm-body { padding: 4px 4px 10px; white-space: normal; }
 #dashboard-power-mode button { cursor: pointer; margin: 0; }
 #dashboard-power-mode button:disabled { cursor: default; }
+#dashboard-power-mode .tile-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+#dashboard-power-mode .tile-header-left { flex: 1; min-width: 0; }
+#dashboard-power-mode .tile-header-right { flex-shrink: 0; margin-left: auto; }
+#dashboard-power-mode .dpm-refresh { display: inline-flex; align-items: center; justify-content: center; width: 26px; min-width: 0; height: 26px; padding: 4px; border: 0; background: transparent; color: inherit; box-shadow: none; }
+#dashboard-power-mode .dpm-refresh:disabled { opacity: .5; }
+#dashboard-power-mode .dpm-meta { white-space: normal; }
+#dashboard-power-mode .dpm-conflict { margin-left: 8px; font-size: 12px; font-weight: normal; opacity: .7; }
 #dashboard-power-mode .dpm-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 #dashboard-power-mode select { max-width: 100%; margin: 0; min-width: 130px; }
 #dashboard-power-mode #dpm-governor { flex: 0 0 50%; width: 50%; max-width: 50%; min-width: 0; margin: 0 0 0 auto; box-sizing: border-box; }
@@ -658,11 +664,9 @@ try {
 #dashboard-power-mode input[type="range"] { display: block; width: 100%; margin: 8px 0; accent-color: #e78d22; }
 #dashboard-power-mode .dpm-limits { display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5; }
 #dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
-#dashboard-power-mode .dpm-warning { padding: 8px; border-left: 3px solid #e78d22; line-height: 1.5; margin: 10px 0; }
-#dashboard-power-mode .dpm-actions { display: flex; gap: 8px; margin-top: 12px; }
 #dashboard-power-mode [hidden] { display: none !important; }
 </INLINE>
-    <SHA256>3937b8dd62ec79d6aed86f9ab0d7384a1eb19a6b5443c4c3eed9170250bf7665</SHA256>
+    <SHA256>78495e4f2667d69ba83ba9693af07f224e866a229b9876cd7935d39ca74b2862</SHA256>
   </FILE>
   <FILE Run="/bin/bash" Method="install">
     <INLINE>#!/bin/bash

@@ -68,6 +68,12 @@ with sync_playwright() as p:
     assert card.locator('[data-dpm="cap-ticks"] option').count() == 33
     assert not posts
     expect(message).to_be_hidden()
+    notice = card.locator('[data-dpm="conflict"]')
+    expect(notice).to_have_text('Tips & Tweaks Plugin may override these settings.')
+    expect(notice).to_be_visible()
+    assert card.locator('.dpm-meta [data-dpm="conflict"]').count() == 1
+    assert card.locator('.tile-header-right-controls [data-dpm="refresh"]').count() == 1
+    assert card.locator('.dpm-body [data-dpm="refresh"], .dpm-warning').count() == 0
     expect(card.locator('[data-dpm="hardware"]')).to_contain_text('2 CPUs')
     expect(card.locator('[data-dpm="cap-low"]')).to_have_text('800 MHz')
     expect(card.locator('[data-dpm="cap-high"]')).to_have_text('4,000 MHz')
@@ -81,6 +87,13 @@ with sync_playwright() as p:
     if args.screenshot:
         (ROOT / 'docs').mkdir(exist_ok=True)
         card.screenshot(path=str(ROOT / 'docs/dashboard-power-mode.png'))
+
+    state['tips_conflict'] = False
+    card.locator('[data-dpm="refresh"]').click()
+    expect(notice).to_be_hidden()
+    state['tips_conflict'] = True
+    card.locator('[data-dpm="refresh"]').click()
+    expect(notice).to_be_visible()
 
     card.locator('[data-dpm="governor"]').select_option('ondemand')
     page.wait_for_timeout(30)
