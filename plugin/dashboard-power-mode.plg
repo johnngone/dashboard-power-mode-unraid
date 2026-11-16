@@ -1,0 +1,683 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.2" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues">
+  <CHANGES>Use a Turbo Boost checkbox and a frequency slider with 100 MHz notches.
+Remove redundant power preset buttons; refresh limits after each change.
+Hardware detection, persistent settings, and Tips and Tweaks conflict detection.
+</CHANGES>
+  <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/DashboardPowerMode.page" Mode="0644">
+    <INLINE>Menu="Dashboard:0"
+---
+&lt;?php
+/* SPDX-License-Identifier: GPL-2.0-only */
+$mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
+&lt;tbody id="dashboard-power-mode" title="_(Power Mode)_"&gt;
+&lt;tr&gt;&lt;td&gt;&lt;span class="tile-header"&gt;&lt;span class="tile-header-left"&gt;
+&lt;i class="fa fa-bolt f32"&gt;&lt;/i&gt;&lt;div class="section"&gt;&lt;h3 class="tile-header-main"&gt;_(Power Mode)_&lt;/h3&gt;
+&lt;span data-dpm="hardware"&gt;Loading CPU controls…&lt;/span&gt;&lt;/div&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;
+&lt;div class="dpm-body"&gt;
+  &lt;div class="dpm-row"&gt;&lt;label for="dpm-governor"&gt;Governor&lt;/label&gt;&lt;select id="dpm-governor" data-dpm="governor" disabled&gt;&lt;/select&gt;&lt;/div&gt;
+  &lt;div class="dpm-row"&gt;&lt;label for="dpm-turbo"&gt;Turbo Boost&lt;/label&gt;&lt;span class="dpm-toggle"&gt;&lt;input id="dpm-turbo" data-dpm="turbo" type="checkbox" disabled aria-describedby="dpm-turbo-status"&gt;&lt;span id="dpm-turbo-status" data-dpm="turbo-status"&gt;Unavailable&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;
+  &lt;div class="dpm-row"&gt;&lt;label for="dpm-cap"&gt;Maximum frequency&lt;/label&gt;&lt;output for="dpm-cap" data-dpm="cap-label"&gt;Unavailable&lt;/output&gt;&lt;/div&gt;
+  &lt;input id="dpm-cap" data-dpm="cap" type="range" min="0" max="0" step="100" list="dpm-cap-ticks" disabled aria-describedby="dpm-cap-info"&gt;
+  &lt;datalist id="dpm-cap-ticks" data-dpm="cap-ticks"&gt;&lt;/datalist&gt;
+  &lt;p id="dpm-cap-info" class="dpm-note" data-dpm="cap-info"&gt;Detecting the hardware frequency range.&lt;/p&gt;
+  &lt;p class="dpm-note" data-dpm="unsupported" hidden&gt;&lt;/p&gt;
+  &lt;p class="dpm-warning" data-dpm="conflict" hidden&gt;Tips and Tweaks also controls this CPU. Its settings can replace the governor and turbo setting when the array starts or a schedule runs. Its configuration has been left unchanged.&lt;/p&gt;
+  &lt;div class="dpm-actions"&gt;&lt;button type="button" data-dpm="refresh"&gt;Refresh&lt;/button&gt;&lt;/div&gt;
+  &lt;p class="dpm-note" data-dpm="message" role="status" aria-live="polite"&gt;Selections apply and save automatically. Release the frequency slider to save its value.&lt;/p&gt;
+&lt;/div&gt;
+&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+DPM_TILE;
+?&gt;
+&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.2"&gt;
+&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.2" defer&gt;&lt;/script&gt;
+</INLINE>
+    <SHA256>0bf6e6e140b85c010385bcd5730a489a6439f32a0e6ad66736c228ec7c20f16e</SHA256>
+  </FILE>
+  <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/README.md" Mode="0644">
+    <INLINE>**Dashboard Power Mode**
+
+Governor selection, a Turbo Boost checkbox, and a hardware-aware frequency ceiling in 100 MHz steps on the Unraid dashboard.
+
+Open **Dashboard → Power Mode**. Selections apply and save automatically. Release the frequency slider to save its value.
+
+Requires Unraid 7.0+. Other CPU managers can override these settings; Tips and Tweaks is left unchanged.
+
+https://github.com/johnngone/dashboard-power-mode-unraid
+</INLINE>
+    <SHA256>2a695661706c328ec4c20563af6509b9aee68388aea88f42c87f08416d28ee7d</SHA256>
+  </FILE>
+  <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/api.php" Mode="0644">
+    <INLINE>&lt;?php
+/* SPDX-License-Identifier: GPL-2.0-only */
+declare(strict_types=1);
+
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store');
+header('X-Content-Type-Options: nosniff');
+
+function dpm_error(int $code, string $message): void
+{
+    http_response_code($code);
+    echo json_encode(['error' =&gt; $message]);
+    exit;
+}
+
+// Unraid's global prepend checks CSRF on every POST before this file runs.
+// Refuse service under a PHP configuration which would bypass that protection.
+$prepend = realpath((string)ini_get('auto_prepend_file'));
+if ($prepend !== realpath('/usr/local/emhttp/webGui/include/local_prepend.php') || $prepend === false) {
+    dpm_error(503, 'Unraid web authentication and CSRF setup is required.');
+}
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+if (!isset($_SESSION['unraid_login'])) dpm_error(401, 'Sign in to Unraid first.');
+session_write_close();
+
+require_once __DIR__.'/include/PowerControl.php';
+$power = new \DashboardPowerMode\PowerControl();
+try {
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        echo json_encode($power-&gt;status(), JSON_THROW_ON_ERROR);
+    } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $values = $_POST;
+        if (array_key_exists('turbo', $values)) {
+            if (!in_array($values['turbo'], ['0', '1'], true)) throw new InvalidArgumentException('Invalid turbo value.');
+            $values['turbo'] = $values['turbo'] === '1';
+        }
+        if (array_key_exists('max_freq_khz', $values)) {
+            $cap = $values['max_freq_khz'];
+            if (!is_string($cap) || !ctype_digit($cap) || strlen($cap) &gt; 10) throw new InvalidArgumentException('Invalid frequency cap.');
+            $values['max_freq_khz'] = (int)$cap;
+        }
+        echo json_encode($power-&gt;apply($values), JSON_THROW_ON_ERROR);
+    } else {
+        header('Allow: GET, POST');
+        dpm_error(405, 'Use GET or POST.');
+    }
+} catch (InvalidArgumentException $error) {
+    dpm_error(422, $error-&gt;getMessage());
+} catch (Throwable $error) {
+    error_log('dashboard-power-mode: '.$error-&gt;getMessage());
+    dpm_error(409, $error-&gt;getMessage());
+}
+</INLINE>
+    <SHA256>0a1b60fc60eba154d44cedcc4abc5541bf62f2f889b75c5278c7c1d0e77475ef</SHA256>
+  </FILE>
+  <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/include/PowerControl.php" Mode="0644">
+    <INLINE>&lt;?php
+/* SPDX-License-Identifier: GPL-2.0-only */
+declare(strict_types=1);
+
+namespace DashboardPowerMode;
+
+final class PowerControl
+{
+    private string $root;
+    private string $config;
+    private string $lock;
+    private string $tips;
+    private $writer;
+    private $reader;
+
+    public function __construct(
+        string $root = '/sys/devices/system/cpu',
+        string $config = '/boot/config/plugins/dashboard-power-mode/settings.json',
+        string $lock = '/var/lock/dashboard-power-mode.lock',
+        string $tips = '/boot/config/plugins/tips.and.tweaks/tips.and.tweaks.cfg',
+        ?callable $writer = null,
+        ?callable $reader = null
+    ) {
+        $this-&gt;root = rtrim($root, '/');
+        $this-&gt;config = $config;
+        $this-&gt;lock = $lock;
+        $this-&gt;tips = $tips;
+        $this-&gt;writer = $writer;
+        $this-&gt;reader = $reader;
+    }
+
+    private function read(string $path): string
+    {
+        $value = $this-&gt;reader !== null ? ($this-&gt;reader)($path) : @file_get_contents($path);
+        if ($value === false) {
+            throw new \RuntimeException('Cannot read CPU control: '.basename($path));
+        }
+        return trim($value);
+    }
+
+    private function number(string $path): int
+    {
+        $value = $this-&gt;read($path);
+        if (!ctype_digit($value) || (int)$value &lt;= 0) {
+            throw new \RuntimeException('Invalid CPU frequency reported by the kernel.');
+        }
+        return (int)$value;
+    }
+
+    private function write(string $path, string $value): void
+    {
+        if ($this-&gt;writer !== null) {
+            ($this-&gt;writer)($path, $value);
+        } elseif (@file_put_contents($path, $value."\n") === false) {
+            throw new \RuntimeException('Cannot write CPU control: '.basename($path));
+        }
+    }
+
+    private function settle(string $path, string $expected): string
+    {
+        // CPUFreq QoS updates can complete asynchronously after a successful sysfs write.
+        for ($attempt = 0; $attempt &lt; 20; $attempt++) {
+            $actual = $this-&gt;read($path);
+            if ($actual === $expected) return $actual;
+            usleep(5000);
+        }
+        return $this-&gt;read($path);
+    }
+
+    private function policyPaths(): array
+    {
+        $paths = glob($this-&gt;root.'/cpufreq/policy[0-9]*', GLOB_ONLYDIR) ?: [];
+        // Legacy CPUFreq layouts may expose only cpuN/cpufreq symlinks.
+        if (!$paths) {
+            foreach (glob($this-&gt;root.'/cpu[0-9]*/cpufreq', GLOB_ONLYDIR) ?: [] as $path) {
+                $paths[] = realpath($path) ?: $path;
+            }
+        }
+        $paths = array_values(array_unique($paths));
+        sort($paths, SORT_NATURAL);
+        return array_values(array_filter($paths, static function ($path) {
+            return is_readable($path.'/scaling_governor');
+        }));
+    }
+
+    private function turboControls(array $paths): array
+    {
+        $intel = $this-&gt;root.'/intel_pstate/no_turbo';
+        $global = $this-&gt;root.'/cpufreq/boost';
+        if (is_readable($intel)) {
+            return [['path' =&gt; $intel, 'inverted' =&gt; true]];
+        }
+        if (is_readable($global)) {
+            return [['path' =&gt; $global, 'inverted' =&gt; false]];
+        }
+        $controls = [];
+        foreach ($paths as $path) {
+            if (!is_readable($path.'/boost')) {
+                return []; // A server-wide toggle must cover every policy.
+            }
+            $controls[] = ['path' =&gt; $path.'/boost', 'inverted' =&gt; false];
+        }
+        return $controls;
+    }
+
+    private function uniform(array $values)
+    {
+        return $values &amp;&amp; count(array_unique($values, SORT_REGULAR)) === 1 ? $values[0] : null;
+    }
+
+    public function status(): array
+    {
+        $paths = $this-&gt;policyPaths();
+        $policies = [];
+        $common = null;
+        $governorWritable = (bool)$paths;
+        $capWritable = (bool)$paths;
+        foreach ($paths as $path) {
+            $governors = preg_split('/\s+/', $this-&gt;read($path.'/scaling_available_governors'), -1, PREG_SPLIT_NO_EMPTY);
+            $common = $common === null ? $governors : array_values(array_intersect($common, $governors));
+            $governorWritable = $governorWritable &amp;&amp; is_writable($path.'/scaling_governor');
+            $hasCap = is_readable($path.'/scaling_min_freq') &amp;&amp; is_readable($path.'/scaling_max_freq')
+                &amp;&amp; is_readable($path.'/cpuinfo_min_freq') &amp;&amp; is_readable($path.'/cpuinfo_max_freq');
+            $capWritable = $capWritable &amp;&amp; $hasCap &amp;&amp; is_writable($path.'/scaling_max_freq');
+            $policies[] = [
+                'id' =&gt; basename($path),
+                'driver' =&gt; is_readable($path.'/scaling_driver') ? $this-&gt;read($path.'/scaling_driver') : 'unknown',
+                'governors' =&gt; $governors,
+                'governor' =&gt; $this-&gt;read($path.'/scaling_governor'),
+                'min_khz' =&gt; $hasCap ? $this-&gt;number($path.'/scaling_min_freq') : null,
+                'max_khz' =&gt; $hasCap ? $this-&gt;number($path.'/scaling_max_freq') : null,
+                'hw_min_khz' =&gt; $hasCap ? $this-&gt;number($path.'/cpuinfo_min_freq') : null,
+                'hw_max_khz' =&gt; $hasCap ? $this-&gt;number($path.'/cpuinfo_max_freq') : null,
+            ];
+        }
+        $common = $common ?: [];
+        sort($common);
+        $controls = $this-&gt;turboControls($paths);
+        $boost = [];
+        $turboWritable = (bool)$controls;
+        foreach ($controls as $control) {
+            $value = $this-&gt;read($control['path']);
+            $turboWritable = $turboWritable &amp;&amp; is_writable($control['path']) &amp;&amp; in_array($value, ['0', '1'], true);
+            $boost[] = $value === ($control['inverted'] ? '0' : '1');
+        }
+        $min = $capWritable ? max(array_column($policies, 'min_khz')) : null;
+        $max = $capWritable ? min(array_column($policies, 'hw_max_khz')) : null;
+        $tips = is_readable($this-&gt;tips) ? @parse_ini_file($this-&gt;tips, false, INI_SCANNER_RAW) : [];
+        $conflict = !empty($tips['CPU_GOVERNOR']) || ($tips['SCHEDULED'] ?? 'no') === 'yes'
+            || ($tips['TURBO_SCHEDULE'] ?? 'no') === 'yes';
+        return [
+            'policies' =&gt; $policies,
+            'drivers' =&gt; array_values(array_unique(array_column($policies, 'driver'))),
+            'governors' =&gt; $common,
+            'governor_supported' =&gt; (bool)$paths &amp;&amp; $governorWritable &amp;&amp; (bool)$common,
+            'governor' =&gt; $this-&gt;uniform(array_column($policies, 'governor')),
+            'presets' =&gt; [
+                'efficiency' =&gt; in_array('powersave', $common, true) ? 'powersave' : null,
+                'balanced' =&gt; in_array('ondemand', $common, true) ? 'ondemand'
+                    : (in_array('balance_power', $common, true) ? 'balance_power' : null),
+                'performance' =&gt; in_array('performance', $common, true) ? 'performance' : null,
+            ],
+            'turbo' =&gt; ['supported' =&gt; $turboWritable, 'enabled' =&gt; $this-&gt;uniform($boost)],
+            'frequency' =&gt; [
+                'supported' =&gt; (bool)$paths &amp;&amp; $capWritable &amp;&amp; $min &lt;= $max,
+                'min_khz' =&gt; $min, 'max_khz' =&gt; $max,
+                'cap_khz' =&gt; $this-&gt;uniform(array_column($policies, 'max_khz')),
+                'effective_caps_khz' =&gt; array_values(array_unique(array_filter(array_column($policies, 'max_khz')))),
+            ],
+            'tips_conflict' =&gt; $conflict,
+            'saved' =&gt; $this-&gt;load(),
+        ];
+    }
+
+    private function load(): array
+    {
+        if (!file_exists($this-&gt;config)) {
+            return [];
+        }
+        $data = json_decode($this-&gt;read($this-&gt;config), true);
+        if (!is_array($data) || array_diff(array_keys($data), ['governor', 'turbo', 'max_freq_khz'])) {
+            throw new \RuntimeException('Saved power settings are invalid. Restore settings.json from backup or remove it.');
+        }
+        return $data;
+    }
+
+    private function save(array $data): void
+    {
+        $dir = dirname($this-&gt;config);
+        if (!is_dir($dir) &amp;&amp; !@mkdir($dir, 0700, true) &amp;&amp; !is_dir($dir)) {
+            throw new \RuntimeException('Cannot create the plugin configuration directory.');
+        }
+        $temporary = @tempnam($dir, '.settings-');
+        if ($temporary === false) {
+            throw new \RuntimeException('Cannot save power settings.');
+        }
+        try {
+            if (@file_put_contents($temporary, json_encode($data, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n") === false) {
+                throw new \RuntimeException('Cannot save power settings.');
+            }
+            @chmod($temporary, 0600);
+            if (!@rename($temporary, $this-&gt;config)) {
+                throw new \RuntimeException('Cannot replace saved power settings.');
+            }
+        } finally {
+            if (file_exists($temporary)) {
+                @unlink($temporary);
+            }
+        }
+    }
+
+    private function validate(array $values, array $status): void
+    {
+        if (!$values || array_diff(array_keys($values), ['governor', 'turbo', 'max_freq_khz'])) {
+            throw new \InvalidArgumentException('Supply only governor, turbo, or max_freq_khz.');
+        }
+        if (array_key_exists('governor', $values)
+            &amp;&amp; (!$status['governor_supported'] || !is_string($values['governor'])
+                || !in_array($values['governor'], $status['governors'], true))) {
+            throw new \InvalidArgumentException('Governor is not available on every CPU policy.');
+        }
+        if (array_key_exists('turbo', $values) &amp;&amp; (!$status['turbo']['supported'] || !is_bool($values['turbo']))) {
+            throw new \InvalidArgumentException('Turbo control is unavailable or its value is invalid.');
+        }
+        if (array_key_exists('max_freq_khz', $values)) {
+            $cap = $values['max_freq_khz'];
+            // Some kernels lower cpuinfo_max_freq while turbo is off. Validate
+            // the upper bound again after an explicitly requested turbo enable.
+            $enablingTurbo = ($values['turbo'] ?? null) === true &amp;&amp; $status['turbo']['enabled'] !== true;
+            if (!$status['frequency']['supported'] || !is_int($cap)
+                || $cap &lt; $status['frequency']['min_khz'] || $cap &lt;= 0 || $cap &gt; 100000000
+                || (!$enablingTurbo &amp;&amp; $cap &gt; $status['frequency']['max_khz'])) {
+                throw new \InvalidArgumentException('Frequency cap must be within the displayed hardware range and above every policy minimum.');
+            }
+        }
+    }
+
+    /** Changed fields only; omitted controls are left alone. */
+    public function apply(array $values, bool $persist = true): array
+    {
+        $handle = @fopen($this-&gt;lock, 'c');
+        if ($handle === false || !flock($handle, LOCK_EX | LOCK_NB)) {
+            if (is_resource($handle)) fclose($handle);
+            throw new \RuntimeException('Another power change is running. Try again.');
+        }
+        $snapshot = [];
+        try {
+            $before = $this-&gt;status();
+            $this-&gt;validate($values, $before);
+            $paths = $this-&gt;policyPaths();
+            $controls = $this-&gt;turboControls($paths);
+            // Turbo changes can also modify both policy limits. Capture those side effects.
+            foreach ($paths as $path) {
+                foreach (['scaling_governor', 'scaling_min_freq', 'scaling_max_freq'] as $file) {
+                    if (is_readable($path.'/'.$file)) $snapshot[$path.'/'.$file] = $this-&gt;read($path.'/'.$file);
+                }
+            }
+            foreach ($controls as $control) $snapshot[$control['path']] = $this-&gt;read($control['path']);
+            try {
+                if (array_key_exists('turbo', $values)) {
+                    foreach ($controls as $control) {
+                        $raw = $values['turbo'] !== $control['inverted'] ? '1' : '0';
+                        $this-&gt;write($control['path'], $raw);
+                        if ($this-&gt;read($control['path']) !== $raw) throw new \RuntimeException('Kernel did not accept the turbo setting.');
+                    }
+                    usleep(10000);
+                    if ($values['turbo'] === true) $this-&gt;validate($values, $this-&gt;status());
+                }
+                if (isset($values['governor'])) {
+                    foreach ($paths as $path) {
+                        $this-&gt;write($path.'/scaling_governor', $values['governor']);
+                        if ($this-&gt;read($path.'/scaling_governor') !== $values['governor']) {
+                            throw new \RuntimeException('Kernel did not accept the governor.');
+                        }
+                    }
+                }
+                if (isset($values['max_freq_khz'])) {
+                    foreach ($paths as $path) {
+                        $this-&gt;write($path.'/scaling_max_freq', (string)$values['max_freq_khz']);
+                        $expected = min($values['max_freq_khz'], $this-&gt;number($path.'/cpuinfo_max_freq'));
+                        $accepted = (int)$this-&gt;settle($path.'/scaling_max_freq', (string)$expected);
+                        if ($accepted &lt; $this-&gt;number($path.'/scaling_min_freq') || $accepted &gt; $values['max_freq_khz']) {
+                            throw new \RuntimeException('Kernel did not accept the frequency ceiling.');
+                        }
+                    }
+                }
+                foreach ($paths as $path) {
+                    if (isset($snapshot[$path.'/scaling_min_freq'])
+                        &amp;&amp; $this-&gt;read($path.'/scaling_min_freq') !== $snapshot[$path.'/scaling_min_freq']) {
+                        throw new \RuntimeException('Kernel changed a CPU minimum frequency; change rejected to preserve your minimum settings.');
+                    }
+                }
+                $after = $this-&gt;status();
+                if ($persist) {
+                    $this-&gt;save(array_replace($before['saved'], $values));
+                    $after['saved'] = array_replace($before['saved'], $values);
+                }
+                return $after;
+            } catch (\Throwable $error) {
+                $failures = [];
+                // Restore turbo first, then original bounds in an order that cannot cross.
+                foreach ($controls as $control) {
+                    try {
+                        $this-&gt;write($control['path'], $snapshot[$control['path']]);
+                        if ($this-&gt;read($control['path']) !== $snapshot[$control['path']]) {
+                            throw new \RuntimeException('Turbo rollback readback mismatch.');
+                        }
+                    }
+                    catch (\Throwable $ignored) { $failures[] = 'turbo'; }
+                }
+                foreach ($paths as $path) {
+                    try {
+                        if (isset($snapshot[$path.'/scaling_min_freq'], $snapshot[$path.'/scaling_max_freq'])) {
+                            $oldMin = $snapshot[$path.'/scaling_min_freq'];
+                            $oldMax = $snapshot[$path.'/scaling_max_freq'];
+                            if ((int)$oldMax &lt; $this-&gt;number($path.'/scaling_min_freq')) {
+                                $this-&gt;write($path.'/scaling_min_freq', $oldMin);
+                                $this-&gt;settle($path.'/scaling_min_freq', $oldMin);
+                                $this-&gt;write($path.'/scaling_max_freq', $oldMax);
+                                $this-&gt;settle($path.'/scaling_max_freq', $oldMax);
+                            } else {
+                                $this-&gt;write($path.'/scaling_max_freq', $oldMax);
+                                $this-&gt;settle($path.'/scaling_max_freq', $oldMax);
+                                $this-&gt;write($path.'/scaling_min_freq', $oldMin);
+                                $this-&gt;settle($path.'/scaling_min_freq', $oldMin);
+                            }
+                        }
+                        $this-&gt;write($path.'/scaling_governor', $snapshot[$path.'/scaling_governor']);
+                        foreach (['scaling_governor', 'scaling_min_freq', 'scaling_max_freq'] as $file) {
+                            if (isset($snapshot[$path.'/'.$file]) &amp;&amp; $this-&gt;read($path.'/'.$file) !== $snapshot[$path.'/'.$file]) {
+                                throw new \RuntimeException('Rollback readback mismatch.');
+                            }
+                        }
+                    } catch (\Throwable $ignored) { $failures[] = basename($path); }
+                }
+                throw new \RuntimeException($error-&gt;getMessage().($failures
+                    ? ' Rollback incomplete; inspect CPU settings: '.implode(', ', array_unique($failures))
+                    : ' Previous CPU settings restored.'), 0, $error);
+            }
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
+    public function restore(): array
+    {
+        $values = $this-&gt;load();
+        // A new installation must not write CPU controls.
+        if (!$values) return $this-&gt;status();
+        if (($values['turbo'] ?? null) === false &amp;&amp; isset($values['max_freq_khz']) &amp;&amp; is_int($values['max_freq_khz'])) {
+            // Retain the saved requested ceiling, but honor a turbo-disabled
+            // kernel's narrower range when reapplying it at boot.
+            $state = $this-&gt;status();
+            if ($state['frequency']['supported']) {
+                $values['max_freq_khz'] = min($values['max_freq_khz'], $state['frequency']['max_khz']);
+            }
+        }
+        return $this-&gt;apply($values, false);
+    }
+}
+</INLINE>
+    <SHA256>54aaafcb607bf47fcdcf6bea9960f36440d7f17a1dc07d261fbf76b7beda2415</SHA256>
+  </FILE>
+  <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/javascript/power-mode.js" Mode="0644">
+    <INLINE>/* SPDX-License-Identifier: GPL-2.0-only */
+(() =&gt; {
+  'use strict';
+  const endpoint = '/plugins/dashboard-power-mode/api.php';
+  function init() {
+    const root = document.getElementById('dashboard-power-mode');
+    if (!root || root.dataset.initialized) return;
+    root.dataset.initialized = '1';
+    const el = (name) =&gt; root.querySelector(`[data-dpm="${name}"]`);
+    let state;
+    let busy = false;
+    let sliding = false;
+    let revision = 0;
+    const mhz = (khz) =&gt; `${(khz / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 })} MHz`;
+    const message = (text) =&gt; { el('message').textContent = text; };
+    function render(next) {
+      state = next;
+      el('hardware').textContent = next.policies.length
+        ? `${next.drivers.join(', ')} · ${next.policies.length} CPU policies` : 'CPU frequency controls unavailable';
+      el('governor').replaceChildren();
+      if (next.governor === null) el('governor').add(new Option('Mixed / unavailable', '', true, true));
+      next.governors.forEach((governor) =&gt; el('governor').add(new Option(governor, governor, false, next.governor === governor)));
+      el('governor').disabled = busy || !next.governor_supported;
+      el('turbo').checked = next.turbo.enabled === true;
+      el('turbo').indeterminate = next.turbo.supported &amp;&amp; next.turbo.enabled === null;
+      el('turbo').disabled = busy || !next.turbo.supported;
+      el('turbo-status').textContent = !next.turbo.supported ? 'Unavailable'
+        : (next.turbo.enabled === null ? 'Mixed' : (next.turbo.enabled ? 'On' : 'Off'));
+      const freq = next.frequency;
+      const lower = Math.ceil(freq.min_khz / 100000) * 100;
+      const upper = Math.floor(freq.max_khz / 100000) * 100;
+      const selectable = freq.supported &amp;&amp; lower &lt;= upper;
+      el('cap').disabled = busy || !selectable;
+      el('cap-ticks').replaceChildren();
+      if (selectable) {
+        el('cap').min = String(lower);
+        el('cap').max = String(upper);
+        el('cap').value = String(Math.max(lower, Math.min(upper, Math.round((freq.cap_khz ?? freq.max_khz) / 100000) * 100)));
+        for (let tick = lower; tick &lt;= upper; tick += 100) {
+          el('cap-ticks').append(new Option('', String(tick)));
+        }
+        el('cap-label').textContent = freq.cap_khz === null ? 'Mixed' : mhz(freq.cap_khz);
+        el('cap-info').textContent = `${mhz(freq.min_khz)}–${mhz(freq.max_khz)} hardware range. Adjust in 100 MHz steps. The range updates after each change.`;
+      } else {
+        el('cap-label').textContent = freq.cap_khz === null ? 'Unavailable' : mhz(freq.cap_khz);
+        el('cap-info').textContent = freq.supported
+          ? 'No 100 MHz step fits within the current hardware limits.'
+          : 'No writable frequency ceiling with a shared range is exposed by this machine.';
+      }
+      const unavailable = [];
+      if (!next.governor_supported) unavailable.push('Governor selection is not available across all CPU policies.');
+      if (!next.turbo.supported) unavailable.push('A writable Turbo Boost control is not exposed by this machine or firmware.');
+      el('unsupported').hidden = !unavailable.length;
+      el('unsupported').textContent = unavailable.join(' ');
+      el('conflict').hidden = !next.tips_conflict;
+      el('refresh').disabled = busy;
+    }
+    async function request(body) {
+      const response = await fetch(endpoint, {
+        method: body ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store',
+        headers: body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {},
+        body: body ? body.toString() : undefined,
+      });
+      const text = await response.text();
+      let result;
+      try { result = JSON.parse(text); } catch (_) { throw new Error('Could not read CPU settings. Sign in again or refresh the dashboard.'); }
+      if (!response.ok || result.error) throw new Error(result.error || `Request failed (${response.status}).`);
+      return result;
+    }
+    async function refresh(quiet = false) {
+      if (busy || sliding || document.hidden) return;
+      const startedAt = revision;
+      try {
+        const next = await request();
+        // Do not overwrite edits made while the status request was in flight.
+        if (busy || sliding || startedAt !== revision) return;
+        render(next);
+        if (!quiet) message('Selections apply and save automatically. Release the frequency slider to save its value.');
+      } catch (error) { message(error.message); }
+    }
+    el('governor').addEventListener('change', () =&gt; apply('governor'));
+    el('turbo').addEventListener('change', () =&gt; apply('turbo'));
+    el('cap').addEventListener('pointerdown', () =&gt; { sliding = true; revision++; });
+    ['pointerup', 'pointercancel', 'blur'].forEach((event) =&gt; {
+      el('cap').addEventListener(event, () =&gt; { sliding = false; });
+    });
+    el('cap').addEventListener('input', () =&gt; {
+      el('cap-label').textContent = mhz(Math.round(Number(el('cap').value) * 1000));
+      sliding = true;
+      revision++;
+    });
+    el('cap').addEventListener('change', () =&gt; {
+      sliding = false;
+      apply('max_freq_khz');
+    });
+    el('refresh').addEventListener('click', () =&gt; {
+      sliding = false;
+      revision++;
+      refresh();
+    });
+    async function apply(field) {
+      if (busy || !state) return;
+      const values = {
+        governor: el('governor').value,
+        turbo: el('turbo').checked ? '1' : '0',
+        max_freq_khz: String(Math.round(Number(el('cap').value) * 1000)),
+      };
+      const current = {
+        governor: state.governor,
+        turbo: state.turbo.enabled === null ? null : (state.turbo.enabled ? '1' : '0'),
+        max_freq_khz: state.frequency.cap_khz === null ? null : String(state.frequency.cap_khz),
+      };
+      if (values[field] === current[field]) return;
+      if (typeof window.csrf_token !== 'string' || !window.csrf_token) {
+        render(state);
+        message('Your Unraid session has expired. Refresh the dashboard.'); return;
+      }
+      const body = new URLSearchParams({ csrf_token: window.csrf_token });
+      body.set(field, values[field]);
+      busy = true;
+      sliding = false;
+      revision++;
+      root.querySelectorAll('button, select, input').forEach((control) =&gt; { control.disabled = true; });
+      message('Applying CPU settings…');
+      try {
+        const next = await request(body);
+        busy = false;
+        render(next);
+        message(`Applied and saved. Effective frequency ceiling: ${next.frequency.effective_caps_khz.map(mhz).join(' / ') || 'unavailable'}.`);
+      } catch (error) {
+        busy = false;
+        try { render(await request()); } catch (_) { if (state) render(state); }
+        message(error.message);
+      }
+    }
+    refresh();
+    // Poll live values so changes made by Unraid or another plugin are visible.
+    const timer = setInterval(() =&gt; {
+      if (!root.isConnected) { clearInterval(timer); return; }
+      refresh(true);
+    }, 10000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</INLINE>
+    <SHA256>f6cbf07f1563c7a00b41b980e96cfd710e1b1d59efae6637c35e8b5adb3785a0</SHA256>
+  </FILE>
+  <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/scripts/power-mode" Mode="0755">
+    <INLINE>#!/usr/bin/php
+&lt;?php
+/* SPDX-License-Identifier: GPL-2.0-only */
+declare(strict_types=1);
+require_once dirname(__DIR__).'/include/PowerControl.php';
+try {
+    $power = new \DashboardPowerMode\PowerControl();
+    if (($argv[1] ?? '') === 'restore') {
+        $state = $power-&gt;restore();
+    } elseif (($argv[1] ?? '') === 'status') {
+        $state = $power-&gt;status();
+    } else {
+        fwrite(STDERR, "Usage: power-mode status|restore\n");
+        exit(2);
+    }
+    echo json_encode($state, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n";
+} catch (Throwable $error) {
+    fwrite(STDERR, 'dashboard-power-mode: '.$error-&gt;getMessage()."\n");
+    exit(1);
+}
+</INLINE>
+    <SHA256>66b6f4578e850306c8424b369218219cdfa57f0fd0c8636dd067f0a30d45bff9</SHA256>
+  </FILE>
+  <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/styles/power-mode.css" Mode="0644">
+    <INLINE>/* SPDX-License-Identifier: GPL-2.0-only */
+#dashboard-power-mode .dpm-body { padding: 4px 4px 10px; white-space: normal; }
+#dashboard-power-mode button { cursor: pointer; margin: 0; }
+#dashboard-power-mode button:disabled { cursor: default; }
+#dashboard-power-mode .dpm-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+#dashboard-power-mode select { max-width: 100%; margin: 0; min-width: 130px; }
+#dashboard-power-mode .dpm-toggle { display: inline-flex; align-items: center; gap: 8px; }
+#dashboard-power-mode input[type="checkbox"] { margin: 0; accent-color: #e78d22; }
+#dashboard-power-mode input[type="range"] { display: block; width: 100%; margin: 8px 0; accent-color: #e78d22; }
+#dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
+#dashboard-power-mode .dpm-warning { padding: 8px; border-left: 3px solid #e78d22; line-height: 1.5; margin: 10px 0; }
+#dashboard-power-mode .dpm-actions { display: flex; gap: 8px; margin-top: 12px; }
+#dashboard-power-mode [hidden] { display: none !important; }
+</INLINE>
+    <SHA256>1d03ce45e77251436ca482b0deccfdd69aaa03615de3147a9612015b36025e03</SHA256>
+  </FILE>
+  <FILE Run="/bin/bash" Method="install">
+    <INLINE>#!/bin/bash
+set -eu
+mkdir -p /boot/config/plugins/dashboard-power-mode
+chmod 0700 /boot/config/plugins/dashboard-power-mode || true
+if [ -s /boot/config/plugins/dashboard-power-mode/settings.json ]; then
+  if ! /usr/local/emhttp/plugins/dashboard-power-mode/scripts/power-mode restore &gt;/dev/null; then
+    logger -t dashboard-power-mode 'Saved CPU settings could not be restored; inspect the dashboard and syslog.'
+  fi
+fi
+echo "Dashboard Power Mode installed. Open Dashboard to use the controls."
+</INLINE>
+  </FILE>
+  <FILE Run="/bin/bash" Method="remove">
+    <INLINE>#!/bin/bash
+set -eu
+rm -rf -- /usr/local/emhttp/plugins/dashboard-power-mode
+echo "Dashboard Power Mode removed. Saved settings are retained; current CPU settings remain until changed or rebooted."
+</INLINE>
+  </FILE>
+</PLUGIN>

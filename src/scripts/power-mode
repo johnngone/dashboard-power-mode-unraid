@@ -1,0 +1,20 @@
+#!/usr/bin/php
+<?php
+/* SPDX-License-Identifier: GPL-2.0-only */
+declare(strict_types=1);
+require_once dirname(__DIR__).'/include/PowerControl.php';
+try {
+    $power = new \DashboardPowerMode\PowerControl();
+    if (($argv[1] ?? '') === 'restore') {
+        $state = $power->restore();
+    } elseif (($argv[1] ?? '') === 'status') {
+        $state = $power->status();
+    } else {
+        fwrite(STDERR, "Usage: power-mode status|restore\n");
+        exit(2);
+    }
+    echo json_encode($state, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n";
+} catch (Throwable $error) {
+    fwrite(STDERR, 'dashboard-power-mode: '.$error->getMessage()."\n");
+    exit(1);
+}

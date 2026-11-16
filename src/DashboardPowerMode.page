@@ -1,0 +1,28 @@
+Menu="Dashboard:0"
+---
+<?php
+/* SPDX-License-Identifier: GPL-2.0-only */
+$mytiles['dashboard-power-mode']['column1'] = <<<'DPM_TILE'
+<tbody id="dashboard-power-mode" title="_(Power Mode)_">
+<tr><td><span class="tile-header"><span class="tile-header-left">
+<i class="fa fa-bolt f32"></i><div class="section"><h3 class="tile-header-main">_(Power Mode)_</h3>
+<span data-dpm="hardware">Loading CPU controls…</span></div></span></span></td></tr>
+<tr><td>
+<div class="dpm-body">
+  <div class="dpm-row"><label for="dpm-governor">Governor</label><select id="dpm-governor" data-dpm="governor" disabled></select></div>
+  <div class="dpm-row"><label for="dpm-turbo">Turbo Boost</label><span class="dpm-toggle"><input id="dpm-turbo" data-dpm="turbo" type="checkbox" disabled aria-describedby="dpm-turbo-status"><span id="dpm-turbo-status" data-dpm="turbo-status">Unavailable</span></span></div>
+  <div class="dpm-row"><label for="dpm-cap">Maximum frequency</label><output for="dpm-cap" data-dpm="cap-label">Unavailable</output></div>
+  <input id="dpm-cap" data-dpm="cap" type="range" min="0" max="0" step="100" list="dpm-cap-ticks" disabled aria-describedby="dpm-cap-info">
+  <datalist id="dpm-cap-ticks" data-dpm="cap-ticks"></datalist>
+  <p id="dpm-cap-info" class="dpm-note" data-dpm="cap-info">Detecting the hardware frequency range.</p>
+  <p class="dpm-note" data-dpm="unsupported" hidden></p>
+  <p class="dpm-warning" data-dpm="conflict" hidden>Tips and Tweaks also controls this CPU. Its settings can replace the governor and turbo setting when the array starts or a schedule runs. Its configuration has been left unchanged.</p>
+  <div class="dpm-actions"><button type="button" data-dpm="refresh">Refresh</button></div>
+  <p class="dpm-note" data-dpm="message" role="status" aria-live="polite">Selections apply and save automatically. Release the frequency slider to save its value.</p>
+</div>
+</td></tr>
+</tbody>
+DPM_TILE;
+?>
+<link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.2">
+<script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.2" defer></script>

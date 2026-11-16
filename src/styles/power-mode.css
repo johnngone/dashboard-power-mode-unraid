@@ -1,0 +1,13 @@
+/* SPDX-License-Identifier: GPL-2.0-only */
+#dashboard-power-mode .dpm-body { padding: 4px 4px 10px; white-space: normal; }
+#dashboard-power-mode button { cursor: pointer; margin: 0; }
+#dashboard-power-mode button:disabled { cursor: default; }
+#dashboard-power-mode .dpm-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+#dashboard-power-mode select { max-width: 100%; margin: 0; min-width: 130px; }
+#dashboard-power-mode .dpm-toggle { display: inline-flex; align-items: center; gap: 8px; }
+#dashboard-power-mode input[type="checkbox"] { margin: 0; accent-color: #e78d22; }
+#dashboard-power-mode input[type="range"] { display: block; width: 100%; margin: 8px 0; accent-color: #e78d22; }
+#dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
+#dashboard-power-mode .dpm-warning { padding: 8px; border-left: 3px solid #e78d22; line-height: 1.5; margin: 10px 0; }
+#dashboard-power-mode .dpm-actions { display: flex; gap: 8px; margin-top: 12px; }
+#dashboard-power-mode [hidden] { display: none !important; }

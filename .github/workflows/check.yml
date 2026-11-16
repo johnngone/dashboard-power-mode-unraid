@@ -1,0 +1,32 @@
+name: Check plugin
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - run: python build.py --check
+      - run: python tests/manifest.py
+      - run: python tests/privacy.py --history
+      - run: python tests/syntax.py
+      - run: node --check src/javascript/power-mode.js
+      - run: php tests/power-control.php
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: python tests/dashboard.py
