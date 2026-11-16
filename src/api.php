@@ -27,7 +27,12 @@ require_once __DIR__.'/include/PowerControl.php';
 $power = new \DashboardPowerMode\PowerControl();
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        echo json_encode($power->status(), JSON_THROW_ON_ERROR);
+        if (isset($_GET['frequencies'])) {
+            require_once __DIR__.'/include/CpuFrequency.php';
+            echo json_encode(['frequencies_khz' => (object)\DashboardPowerMode\CpuFrequency::read()], JSON_THROW_ON_ERROR);
+        } else {
+            echo json_encode($power->status(), JSON_THROW_ON_ERROR);
+        }
     } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $values = $_POST;
         if (array_key_exists('turbo', $values)) {

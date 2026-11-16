@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.5" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues" icon="fa-bolt">
-  <CHANGES>Show saving status beside Refresh without resizing the tile.
-Use the dashboard thunderbolt icon in the plugin list.
+<PLUGIN name="dashboard-power-mode" author="johnngone" version="2026.11.15.6" min="7.0.0" pluginURL="https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plugin/dashboard-power-mode.plg" support="https://github.com/johnngone/dashboard-power-mode-unraid/issues" icon="fa-bolt">
+  <CHANGES>Place adjustment controls below the existing Processor display.
+Add sampled GHz readings alongside each CPU load bar.
 Hardware detection, persistent settings, and Tips and Tweaks conflict detection.
 </CHANGES>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/DashboardPowerMode.page" Mode="0644">
@@ -12,8 +12,7 @@ Hardware detection, persistent settings, and Tips and Tweaks conflict detection.
 $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
 &lt;tbody id="dashboard-power-mode" title="_(Power Mode)_"&gt;
 &lt;tr&gt;&lt;td&gt;&lt;span class="tile-header"&gt;&lt;span class="tile-header-left"&gt;
-&lt;i class="fa fa-bolt f32"&gt;&lt;/i&gt;&lt;div class="section"&gt;&lt;h3 class="tile-header-main"&gt;_(Power Mode)_&lt;/h3&gt;
-&lt;span class="dpm-meta"&gt;&lt;span data-dpm="hardware"&gt;Loading CPU controls…&lt;/span&gt;&lt;span class="dpm-conflict" data-dpm="conflict" hidden&gt;Tips &amp;amp; Tweaks Plugin may override these settings.&lt;/span&gt;&lt;/span&gt;&lt;/div&gt;&lt;/span&gt;
+&lt;h3 class="tile-header-main dpm-heading"&gt;&lt;span data-dpm="hardware"&gt;CPU adjustment&lt;/span&gt;&lt;span class="dpm-conflict" data-dpm="conflict" hidden&gt; (Tips &amp;amp; Tweaks plugin may override)&lt;/span&gt;&lt;/h3&gt;&lt;/span&gt;
 &lt;span class="tile-header-right"&gt;&lt;span class="tile-header-right-controls"&gt;&lt;span class="dpm-saving" data-dpm="saving" role="status" aria-live="polite" hidden&gt;Saving…&lt;/span&gt;&lt;button type="button" class="dpm-refresh" data-dpm="refresh" title="Refresh" aria-label="Refresh"&gt;&lt;svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"&gt;&lt;path d="M20 7v5h-5M20 12a8 8 0 1 0-2.3 5.7"/&gt;&lt;/svg&gt;&lt;/button&gt;&lt;/span&gt;&lt;/span&gt;&lt;/span&gt;&lt;/td&gt;&lt;/tr&gt;
 &lt;tr&gt;&lt;td&gt;
 &lt;div class="dpm-body"&gt;
@@ -30,23 +29,23 @@ $mytiles['dashboard-power-mode']['column1'] = &lt;&lt;&lt;'DPM_TILE'
 &lt;/tbody&gt;
 DPM_TILE;
 ?&gt;
-&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.5"&gt;
-&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.5" defer&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="/plugins/dashboard-power-mode/styles/power-mode.css?v=2026.11.15.6"&gt;
+&lt;script src="/plugins/dashboard-power-mode/javascript/power-mode.js?v=2026.11.15.6" defer&gt;&lt;/script&gt;
 </INLINE>
-    <SHA256>79f8994124838e70599c3588ba65b83c4a136ed5931916046f10e48234f2389d</SHA256>
+    <SHA256>146250d00a78df799516609dbfd4e94188f9340fb5152d68dbf91773b38e754d</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/README.md" Mode="0644">
     <INLINE>**Dashboard Power Mode**
 
-Governor selection, a Turbo Boost checkbox, and a hardware-aware frequency ceiling in 100 MHz steps on the Unraid dashboard.
+Governor selection, a Turbo Boost checkbox, and a hardware-aware frequency ceiling below the Processor display, plus sampled GHz readings beside CPU load bars.
 
-Open **Dashboard → Power Mode**. Selections apply and save automatically. Release the frequency slider to save its value.
+Open **Dashboard → Processor**. Selections apply and save automatically. Release the frequency slider to save its value.
 
 Requires Unraid 7.0+. Other CPU managers can override these settings; Tips and Tweaks is left unchanged.
 
 https://github.com/johnngone/dashboard-power-mode-unraid
 </INLINE>
-    <SHA256>2a695661706c328ec4c20563af6509b9aee68388aea88f42c87f08416d28ee7d</SHA256>
+    <SHA256>73f802d59e76ea5b924ff78f5388e7382992340fb30cab85467bd2532ed32887</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/api.php" Mode="0644">
     <INLINE>&lt;?php
@@ -78,7 +77,12 @@ require_once __DIR__.'/include/PowerControl.php';
 $power = new \DashboardPowerMode\PowerControl();
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        echo json_encode($power-&gt;status(), JSON_THROW_ON_ERROR);
+        if (isset($_GET['frequencies'])) {
+            require_once __DIR__.'/include/CpuFrequency.php';
+            echo json_encode(['frequencies_khz' =&gt; (object)\DashboardPowerMode\CpuFrequency::read()], JSON_THROW_ON_ERROR);
+        } else {
+            echo json_encode($power-&gt;status(), JSON_THROW_ON_ERROR);
+        }
     } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $values = $_POST;
         if (array_key_exists('turbo', $values)) {
@@ -102,7 +106,39 @@ try {
     dpm_error(409, $error-&gt;getMessage());
 }
 </INLINE>
-    <SHA256>0a1b60fc60eba154d44cedcc4abc5541bf62f2f889b75c5278c7c1d0e77475ef</SHA256>
+    <SHA256>00d5e2715c9defdeebaf2a7a00bbd95de01d487fe3de8220703e014745785e4c</SHA256>
+  </FILE>
+  <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/include/CpuFrequency.php" Mode="0644">
+    <INLINE>&lt;?php
+/* SPDX-License-Identifier: GPL-2.0-only */
+declare(strict_types=1);
+
+namespace DashboardPowerMode;
+
+final class CpuFrequency
+{
+    /** Sampled frequencies reported by Linux, keyed by logical CPU number. */
+    public static function read(string $path = '/proc/cpuinfo'): array
+    {
+        $contents = @file_get_contents($path);
+        if ($contents === false) return [];
+        $cpu = null;
+        $values = [];
+        foreach (explode("\n", $contents) as $line) {
+            if (trim($line) === '') {
+                $cpu = null;
+            } elseif (preg_match('/^processor\s*:\s*(\d+)\s*$/', $line, $match)) {
+                $cpu = (int)$match[1];
+            } elseif ($cpu !== null &amp;&amp; preg_match('/^cpu MHz\s*:\s*(\d+(?:\.\d+)?)\s*$/', $line, $match)) {
+                $khz = (int)round((float)$match[1] * 1000);
+                if ($khz &gt; 0) $values[$cpu] = $khz;
+            }
+        }
+        return $values;
+    }
+}
+</INLINE>
+    <SHA256>679e2bdf61dcdff3adcce926addee848661f84fc76e59bf550a8fee3d0797562</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/include/PowerControl.php" Mode="0644">
     <INLINE>&lt;?php
@@ -475,20 +511,65 @@ final class PowerControl
   'use strict';
   const endpoint = '/plugins/dashboard-power-mode/api.php';
   function init() {
-    const root = document.getElementById('dashboard-power-mode');
+    let root = document.getElementById('dashboard-power-mode');
     if (!root || root.dataset.initialized) return;
+    const processor = document.getElementById('cpu_main')?.closest('tbody');
+    if (processor &amp;&amp; processor !== root &amp;&amp; root.tagName === 'TBODY') {
+      const section = document.createElement('div');
+      section.id = root.id;
+      section.className = 'dpm-adjustments';
+      // Keep the controls inside Processor so native sorting and collapsing
+      // move them together, without modifying any Unraid source files.
+      root.querySelectorAll('.tile, .openclose').forEach((control) =&gt; control.remove());
+      Array.from(root.rows).forEach((row) =&gt; {
+        const cell = row.cells[0];
+        while (cell?.firstChild) section.append(cell.firstChild);
+      });
+      const row = document.createElement('tr');
+      row.className = 'dpm-adjustments-row';
+      const cell = document.createElement('td');
+      cell.append(section);
+      row.append(cell);
+      processor.append(row);
+      const spacer = root.previousElementSibling;
+      if (spacer?.querySelector('.stopgap')) spacer.remove();
+      root.remove();
+      root = section;
+    }
     root.dataset.initialized = '1';
     const el = (name) =&gt; root.querySelector(`[data-dpm="${name}"]`);
     let state;
     let busy = false;
     let sliding = false;
     let revision = 0;
+    let frequencyBusy = false;
+    const frequencyLabels = [];
+    processor?.querySelectorAll('tr.cpu_open').forEach((row) =&gt; {
+      const metrics = [];
+      row.querySelectorAll('.load.resize').forEach((load) =&gt; {
+        const cpuClass = Array.from(load.classList).find((name) =&gt; /^cpu\d+$/.test(name));
+        if (!cpuClass) return;
+        const metric = load.parentElement;
+        metric.classList.add('dpm-cpu-metric');
+        const label = document.createElement('span');
+        label.className = 'dpm-cpu-ghz';
+        label.dataset.cpu = cpuClass.slice(3);
+        label.textContent = '— GHz';
+        label.title = `CPU ${label.dataset.cpu} sampled frequency`;
+        metric.append(label);
+        frequencyLabels.push(label);
+        metrics.push(metric);
+      });
+      if (metrics.length) {
+        row.cells[0].classList.add('dpm-cpu-row');
+        if (metrics.length === 1) metrics[0].style.gridColumn = 'span 2';
+      }
+    });
     const mhz = (khz) =&gt; `${(khz / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 })} MHz`;
     const message = (text) =&gt; { el('message').textContent = text; el('message').hidden = !text; };
     function render(next) {
       state = next;
-      el('hardware').textContent = next.policies.length
-        ? `${next.drivers.join(', ')} · ${next.policies.length} CPUs` : 'CPU frequency controls unavailable';
+      el('hardware').textContent = next.drivers.length ? `${next.drivers.join(', ')} adjustment` : 'CPU adjustment';
       el('governor').replaceChildren();
       if (next.governor === null) el('governor').add(new Option('Mixed / unavailable', '', true, true));
       next.governors.forEach((governor) =&gt; el('governor').add(new Option(governor, governor, false, next.governor === governor)));
@@ -529,8 +610,8 @@ final class PowerControl
       el('conflict').hidden = !next.tips_conflict;
       el('refresh').disabled = busy;
     }
-    async function request(body) {
-      const response = await fetch(endpoint, {
+    async function request(body, suffix = '') {
+      const response = await fetch(endpoint + suffix, {
         method: body ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store',
         headers: body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {},
         body: body ? body.toString() : undefined,
@@ -540,6 +621,22 @@ final class PowerControl
       try { result = JSON.parse(text); } catch (_) { throw new Error('Could not read CPU settings. Sign in again or refresh the dashboard.'); }
       if (!response.ok || result.error) throw new Error(result.error || `Request failed (${response.status}).`);
       return result;
+    }
+    async function refreshFrequencies() {
+      if (frequencyBusy || document.hidden || !root.isConnected
+        || !frequencyLabels.some((label) =&gt; label.getClientRects().length)) return;
+      frequencyBusy = true;
+      try {
+        const result = await request(null, '?frequencies=1');
+        frequencyLabels.forEach((label) =&gt; {
+          const khz = result.frequencies_khz?.[label.dataset.cpu];
+          label.textContent = Number.isFinite(khz) &amp;&amp; khz &gt; 0 ? `${(khz / 1000000).toFixed(2)} GHz` : '— GHz';
+        });
+      } catch (_) {
+        frequencyLabels.forEach((label) =&gt; { label.textContent = '— GHz'; });
+      } finally {
+        frequencyBusy = false;
+      }
     }
     async function refresh(quiet = false) {
       if (busy || sliding || document.hidden) return;
@@ -571,6 +668,7 @@ final class PowerControl
       sliding = false;
       revision++;
       refresh();
+      refreshFrequencies();
     });
     async function apply(field) {
       if (busy || !state) return;
@@ -602,6 +700,7 @@ final class PowerControl
         busy = false;
         render(next);
         message('');
+        refreshFrequencies();
       } catch (error) {
         busy = false;
         try { render(await request()); } catch (_) { if (state) render(state); }
@@ -611,6 +710,11 @@ final class PowerControl
       }
     }
     refresh();
+    refreshFrequencies();
+    const frequencyTimer = frequencyLabels.length ? setInterval(() =&gt; {
+      if (!root.isConnected) { clearInterval(frequencyTimer); return; }
+      refreshFrequencies();
+    }, 3000) : null;
     // Poll live values so changes made by Unraid or another plugin are visible.
     const timer = setInterval(() =&gt; {
       if (!root.isConnected) { clearInterval(timer); return; }
@@ -621,7 +725,7 @@ final class PowerControl
   else init();
 })();
 </INLINE>
-    <SHA256>c2d1bf108302cdfb43ca9c57244083ca22cb436376af19b80cafb295ae51c887</SHA256>
+    <SHA256>c279c8aadcd4831463a280eec678791d98a01630f8f59dad9779ce5f6f2ef241</SHA256>
   </FILE>
   <FILE Name="/usr/local/emhttp/plugins/dashboard-power-mode/scripts/power-mode" Mode="0755">
     <INLINE>#!/usr/bin/php
@@ -660,8 +764,9 @@ try {
 #dashboard-power-mode .dpm-saving[hidden] { display: inline-block !important; visibility: hidden; }
 #dashboard-power-mode .dpm-refresh { display: inline-flex; align-items: center; justify-content: center; width: 26px; min-width: 0; height: 26px; padding: 4px; border: 0; background: transparent; color: inherit; box-shadow: none; }
 #dashboard-power-mode .dpm-refresh:disabled { opacity: .5; }
-#dashboard-power-mode .dpm-meta { white-space: normal; }
-#dashboard-power-mode .dpm-conflict { margin-left: 8px; font-size: 12px; font-weight: normal; opacity: .7; }
+#dashboard-power-mode.dpm-adjustments { border-top: 1px solid rgba(128,128,128,.3); margin-top: 8px; padding-top: 10px; }
+#dashboard-power-mode .dpm-heading { margin: 0; font-size: 14px; line-height: 1.5; text-transform: none; white-space: normal; }
+#dashboard-power-mode .dpm-conflict { font-size: 12px; font-weight: normal; opacity: .7; }
 #dashboard-power-mode .dpm-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 #dashboard-power-mode select { max-width: 100%; margin: 0; min-width: 130px; }
 #dashboard-power-mode #dpm-governor { flex: 0 0 50%; width: 50%; max-width: 50%; min-width: 0; margin: 0 0 0 auto; box-sizing: border-box; }
@@ -671,8 +776,14 @@ try {
 #dashboard-power-mode .dpm-limits { display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5; }
 #dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
 #dashboard-power-mode [hidden] { display: none !important; }
+.dpm-cpu-row { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1.5fr) minmax(0,1.5fr); gap: 6px; align-items: center; }
+.dpm-cpu-row &gt; span { width: auto !important; min-width: 0; }
+.dpm-cpu-row &gt; .dpm-cpu-metric { display: inline-flex; align-items: center; gap: 4px; }
+.dpm-cpu-metric &gt; .load { flex: 0 0 3ch; width: 3ch !important; }
+.dpm-cpu-metric &gt; .usage-disk { flex: 1 1 auto; min-width: 10px; width: auto !important; }
+.dpm-cpu-ghz { flex: 0 0 8ch; font-size: 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 </INLINE>
-    <SHA256>92cda437cf4c90a42c3d5e0ac513e2e23de00f0f3926fbac66d7e8dab9fa066e</SHA256>
+    <SHA256>b2289d8c25af04d7f26223f17f9a0f8abfb7e5f7323f9c4b3d1d298b2a1e8eda</SHA256>
   </FILE>
   <FILE Run="/bin/bash" Method="install">
     <INLINE>#!/bin/bash

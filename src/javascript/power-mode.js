@@ -3,20 +3,65 @@
   'use strict';
   const endpoint = '/plugins/dashboard-power-mode/api.php';
   function init() {
-    const root = document.getElementById('dashboard-power-mode');
+    let root = document.getElementById('dashboard-power-mode');
     if (!root || root.dataset.initialized) return;
+    const processor = document.getElementById('cpu_main')?.closest('tbody');
+    if (processor && processor !== root && root.tagName === 'TBODY') {
+      const section = document.createElement('div');
+      section.id = root.id;
+      section.className = 'dpm-adjustments';
+      // Keep the controls inside Processor so native sorting and collapsing
+      // move them together, without modifying any Unraid source files.
+      root.querySelectorAll('.tile, .openclose').forEach((control) => control.remove());
+      Array.from(root.rows).forEach((row) => {
+        const cell = row.cells[0];
+        while (cell?.firstChild) section.append(cell.firstChild);
+      });
+      const row = document.createElement('tr');
+      row.className = 'dpm-adjustments-row';
+      const cell = document.createElement('td');
+      cell.append(section);
+      row.append(cell);
+      processor.append(row);
+      const spacer = root.previousElementSibling;
+      if (spacer?.querySelector('.stopgap')) spacer.remove();
+      root.remove();
+      root = section;
+    }
     root.dataset.initialized = '1';
     const el = (name) => root.querySelector(`[data-dpm="${name}"]`);
     let state;
     let busy = false;
     let sliding = false;
     let revision = 0;
+    let frequencyBusy = false;
+    const frequencyLabels = [];
+    processor?.querySelectorAll('tr.cpu_open').forEach((row) => {
+      const metrics = [];
+      row.querySelectorAll('.load.resize').forEach((load) => {
+        const cpuClass = Array.from(load.classList).find((name) => /^cpu\d+$/.test(name));
+        if (!cpuClass) return;
+        const metric = load.parentElement;
+        metric.classList.add('dpm-cpu-metric');
+        const label = document.createElement('span');
+        label.className = 'dpm-cpu-ghz';
+        label.dataset.cpu = cpuClass.slice(3);
+        label.textContent = '— GHz';
+        label.title = `CPU ${label.dataset.cpu} sampled frequency`;
+        metric.append(label);
+        frequencyLabels.push(label);
+        metrics.push(metric);
+      });
+      if (metrics.length) {
+        row.cells[0].classList.add('dpm-cpu-row');
+        if (metrics.length === 1) metrics[0].style.gridColumn = 'span 2';
+      }
+    });
     const mhz = (khz) => `${(khz / 1000).toLocaleString(undefined, { maximumFractionDigits: 3 })} MHz`;
     const message = (text) => { el('message').textContent = text; el('message').hidden = !text; };
     function render(next) {
       state = next;
-      el('hardware').textContent = next.policies.length
-        ? `${next.drivers.join(', ')} · ${next.policies.length} CPUs` : 'CPU frequency controls unavailable';
+      el('hardware').textContent = next.drivers.length ? `${next.drivers.join(', ')} adjustment` : 'CPU adjustment';
       el('governor').replaceChildren();
       if (next.governor === null) el('governor').add(new Option('Mixed / unavailable', '', true, true));
       next.governors.forEach((governor) => el('governor').add(new Option(governor, governor, false, next.governor === governor)));
@@ -57,8 +102,8 @@
       el('conflict').hidden = !next.tips_conflict;
       el('refresh').disabled = busy;
     }
-    async function request(body) {
-      const response = await fetch(endpoint, {
+    async function request(body, suffix = '') {
+      const response = await fetch(endpoint + suffix, {
         method: body ? 'POST' : 'GET', credentials: 'same-origin', cache: 'no-store',
         headers: body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {},
         body: body ? body.toString() : undefined,
@@ -68,6 +113,22 @@
       try { result = JSON.parse(text); } catch (_) { throw new Error('Could not read CPU settings. Sign in again or refresh the dashboard.'); }
       if (!response.ok || result.error) throw new Error(result.error || `Request failed (${response.status}).`);
       return result;
+    }
+    async function refreshFrequencies() {
+      if (frequencyBusy || document.hidden || !root.isConnected
+        || !frequencyLabels.some((label) => label.getClientRects().length)) return;
+      frequencyBusy = true;
+      try {
+        const result = await request(null, '?frequencies=1');
+        frequencyLabels.forEach((label) => {
+          const khz = result.frequencies_khz?.[label.dataset.cpu];
+          label.textContent = Number.isFinite(khz) && khz > 0 ? `${(khz / 1000000).toFixed(2)} GHz` : '— GHz';
+        });
+      } catch (_) {
+        frequencyLabels.forEach((label) => { label.textContent = '— GHz'; });
+      } finally {
+        frequencyBusy = false;
+      }
     }
     async function refresh(quiet = false) {
       if (busy || sliding || document.hidden) return;
@@ -99,6 +160,7 @@
       sliding = false;
       revision++;
       refresh();
+      refreshFrequencies();
     });
     async function apply(field) {
       if (busy || !state) return;
@@ -130,6 +192,7 @@
         busy = false;
         render(next);
         message('');
+        refreshFrequencies();
       } catch (error) {
         busy = false;
         try { render(await request()); } catch (_) { if (state) render(state); }
@@ -139,6 +202,11 @@
       }
     }
     refresh();
+    refreshFrequencies();
+    const frequencyTimer = frequencyLabels.length ? setInterval(() => {
+      if (!root.isConnected) { clearInterval(frequencyTimer); return; }
+      refreshFrequencies();
+    }, 3000) : null;
     // Poll live values so changes made by Unraid or another plugin are visible.
     const timer = setInterval(() => {
       if (!root.isConnected) { clearInterval(timer); return; }

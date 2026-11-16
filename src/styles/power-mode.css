@@ -10,8 +10,9 @@
 #dashboard-power-mode .dpm-saving[hidden] { display: inline-block !important; visibility: hidden; }
 #dashboard-power-mode .dpm-refresh { display: inline-flex; align-items: center; justify-content: center; width: 26px; min-width: 0; height: 26px; padding: 4px; border: 0; background: transparent; color: inherit; box-shadow: none; }
 #dashboard-power-mode .dpm-refresh:disabled { opacity: .5; }
-#dashboard-power-mode .dpm-meta { white-space: normal; }
-#dashboard-power-mode .dpm-conflict { margin-left: 8px; font-size: 12px; font-weight: normal; opacity: .7; }
+#dashboard-power-mode.dpm-adjustments { border-top: 1px solid rgba(128,128,128,.3); margin-top: 8px; padding-top: 10px; }
+#dashboard-power-mode .dpm-heading { margin: 0; font-size: 14px; line-height: 1.5; text-transform: none; white-space: normal; }
+#dashboard-power-mode .dpm-conflict { font-size: 12px; font-weight: normal; opacity: .7; }
 #dashboard-power-mode .dpm-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 #dashboard-power-mode select { max-width: 100%; margin: 0; min-width: 130px; }
 #dashboard-power-mode #dpm-governor { flex: 0 0 50%; width: 50%; max-width: 50%; min-width: 0; margin: 0 0 0 auto; box-sizing: border-box; }
@@ -21,3 +22,9 @@
 #dashboard-power-mode .dpm-limits { display: flex; justify-content: space-between; font-size: 12px; line-height: 1.5; }
 #dashboard-power-mode .dpm-note { font-size: 12px; line-height: 1.5; opacity: .8; margin: 8px 0; }
 #dashboard-power-mode [hidden] { display: none !important; }
+.dpm-cpu-row { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1.5fr) minmax(0,1.5fr); gap: 6px; align-items: center; }
+.dpm-cpu-row > span { width: auto !important; min-width: 0; }
+.dpm-cpu-row > .dpm-cpu-metric { display: inline-flex; align-items: center; gap: 4px; }
+.dpm-cpu-metric > .load { flex: 0 0 3ch; width: 3ch !important; }
+.dpm-cpu-metric > .usage-disk { flex: 1 1 auto; min-width: 10px; width: auto !important; }
+.dpm-cpu-ghz { flex: 0 0 8ch; font-size: 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }

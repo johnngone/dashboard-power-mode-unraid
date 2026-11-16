@@ -24,6 +24,14 @@ posts = []
 reject = False
 hold = False
 pending = []
+samples = {'0': 1200000, '1': 2400000}
+frequency_requests = 0
+processor_fixture = '''<tbody id="synthetic-processor"><tr><td><h3>Processor</h3></td></tr>
+<tr id="cpu_main"><td>Overall Load: 12%</td></tr>
+<tr class="cpu_open"><td><span class="w26">CPU 0 - HT 1</span>
+<span class="dashboard w36"><span class="cpu0 load resize">10%</span><div class="usage-disk sys"><span></span><span></span></div></span>
+<span class="dashboard w36"><span class="cpu1 load resize">14%</span><div class="usage-disk sys"><span></span><span></span></div></span>
+</td></tr></tbody>'''
 
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
@@ -32,7 +40,11 @@ with sync_playwright() as p:
     page.on('pageerror', lambda error: errors.append(str(error)))
 
     def api(route):
-        global reject
+        global reject, frequency_requests
+        if '?frequencies=1' in route.request.url:
+            frequency_requests += 1
+            route.fulfill(json={'frequencies_khz': samples})
+            return
         if route.request.method == 'POST':
             if hold:
                 pending.append(route)
@@ -56,12 +68,12 @@ with sync_playwright() as p:
                 state['frequency']['effective_caps_khz'] = [int(fields['max_freq_khz'])]
         route.fulfill(json=state)
 
-    page.route('http://power-mode.test/', lambda route: route.fulfill(content_type='text/html', body=f'<!doctype html><meta charset="utf-8"><table>{tile}</table>'))
-    page.route('**/plugins/dashboard-power-mode/api.php', api)
+    page.route('http://power-mode.test/', lambda route: route.fulfill(content_type='text/html', body=f'<!doctype html><meta charset="utf-8"><table>{processor_fixture}{tile}</table>'))
+    page.route('**/plugins/dashboard-power-mode/api.php*', api)
     page.goto('http://power-mode.test/')
     page.evaluate("window.csrf_token = 'synthetic-test-token'")
     page.add_style_tag(path=str(ROOT / 'src/styles/power-mode.css'))
-    page.add_style_tag(content='body { margin: 12px; background:#f6f7f8; color:#25282b; font:14px Arial,sans-serif; } table { width:100%; } select { width:100%; min-width:300px; } button,select { padding:8px; border:1px solid #aaa; border-radius:3px; background:transparent; color:inherit; } h3 { margin:6px 0; }')
+    page.add_style_tag(content='body { margin: 12px; background:#f6f7f8; color:#25282b; font:14px Arial,sans-serif; } table { width:100%; } select { width:100%; min-width:300px; } button,select { padding:8px; border:1px solid #aaa; border-radius:3px; background:transparent; color:inherit; } h3 { margin:6px 0; } .usage-disk { height:7px; background:#bbb; }')
     page.add_script_tag(path=str(ROOT / 'src/javascript/power-mode.js'))
     card = page.locator('#dashboard-power-mode')
     message = card.locator('[data-dpm="message"]')
@@ -74,12 +86,16 @@ with sync_playwright() as p:
     assert not posts
     expect(message).to_be_hidden()
     notice = card.locator('[data-dpm="conflict"]')
-    expect(notice).to_have_text('Tips & Tweaks Plugin may override these settings.')
+    expect(notice).to_have_text('(Tips & Tweaks plugin may override)')
     expect(notice).to_be_visible()
-    assert card.locator('.dpm-meta [data-dpm="conflict"]').count() == 1
+    assert card.locator('.dpm-heading [data-dpm="conflict"]').count() == 1
     assert card.locator('.tile-header-right-controls [data-dpm="refresh"]').count() == 1
     assert card.locator('.dpm-body [data-dpm="refresh"], .dpm-warning').count() == 0
-    expect(card.locator('[data-dpm="hardware"]')).to_contain_text('2 CPUs')
+    expect(card.locator('[data-dpm="hardware"]')).to_have_text('acpi-cpufreq adjustment')
+    assert card.evaluate('el => el.closest("tbody").id') == 'synthetic-processor'
+    assert page.locator('tbody#dashboard-power-mode').count() == 0
+    expect(page.locator('.dpm-cpu-ghz[data-cpu="0"]')).to_have_text('1.20 GHz')
+    expect(page.locator('.dpm-cpu-ghz[data-cpu="1"]')).to_have_text('2.40 GHz')
     expect(card.locator('[data-dpm="cap-low"]')).to_have_text('800 MHz')
     expect(card.locator('[data-dpm="cap-high"]')).to_have_text('4,000 MHz')
     assert card.locator('[data-dpm="cap-info"]').count() == 0
@@ -91,7 +107,17 @@ with sync_playwright() as p:
     # Capture a privacy-safe preview before changing the synthetic state.
     if args.screenshot:
         (ROOT / 'docs').mkdir(exist_ok=True)
-        card.screenshot(path=str(ROOT / 'docs/dashboard-power-mode.png'))
+        page.locator('#synthetic-processor').screenshot(path=str(ROOT / 'docs/dashboard-power-mode.png'))
+
+    samples['0'] = 1800000
+    card.locator('[data-dpm="refresh"]').click()
+    expect(page.locator('.dpm-cpu-ghz[data-cpu="0"]')).to_have_text('1.80 GHz')
+    page.locator('.cpu_open').evaluate('el => el.style.display = "none"')
+    count = frequency_requests
+    card.locator('[data-dpm="refresh"]').click()
+    page.wait_for_timeout(100)
+    assert frequency_requests == count, 'Hidden CPU details must not fetch frequency samples'
+    page.locator('.cpu_open').evaluate('el => el.style.display = ""')
 
     state['tips_conflict'] = False
     card.locator('[data-dpm="refresh"]').click()

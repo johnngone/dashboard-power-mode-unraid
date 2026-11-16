@@ -4,10 +4,11 @@ Validated on a physical Unraid server with Intel CPUFreq. Machine identifiers, e
 
 ## Automated checks
 
-- Reproducible plugin build, XML parsing, and byte-for-byte verification of all seven embedded files and update checksums.
+- Reproducible plugin build, XML parsing, and byte-for-byte verification of all embedded files and update checksums.
 - PHP, JavaScript, and installer shell syntax.
 - **58 backend checks** covering Intel, AMD global boost, per-policy boost, missing controls, heterogeneous policies, shared bounds, input validation, saved settings, locking, failed writes, save failures, rollback, minimum-frequency preservation, changing turbo ranges, and delayed CPUFreq QoS readback.
 - Browser checks with synthetic data cover the Turbo Boost checkbox, mixed and unavailable boost states, absent preset buttons, 100 MHz notches, refreshed bounds after governor and turbo changes, unusual hardware limits, unchanged-value no-ops, one save per slider release, write-error recovery, and expired sessions.
+- Processor integration checks cover controls embedded beneath the existing load rows, per-CPU GHz values, refreshed samples, and skipping frequency reads when CPU details are hidden.
 
 ## Earlier live checks
 

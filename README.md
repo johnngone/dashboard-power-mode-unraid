@@ -1,6 +1,6 @@
 # Dashboard Power Mode (Unraid Plugin)
 
-An Unraid plugin that brings **Power Mode controls to the dashboard**, with governor selection, a Turbo Boost checkbox, and a maximum CPU frequency slider adapted to your hardware.
+An Unraid plugin that adds **power controls below the Processor display**, with governor selection, a Turbo Boost checkbox, a maximum CPU frequency slider, and sampled GHz values beside each CPU load bar.
 
 Repository: https://github.com/johnngone/dashboard-power-mode-unraid
 
@@ -24,13 +24,14 @@ https://raw.githubusercontent.com/johnngone/dashboard-power-mode-unraid/main/plu
 
 ### Usage
 
-Open **Dashboard** and find the **Power Mode** card. If hidden, enable it in the dashboard's content manager.
+Open **Dashboard → Processor**. The driver adjustment section appears below its load display. If the Processor display is unavailable, controls remain in a standalone Power Mode tile.
 
 - Select a governor directly.
 - Check or uncheck **Turbo Boost** and move the **Maximum frequency** slider as needed.
 - Selections apply and save automatically. Each control changes only its own setting.
 - The frequency slider has a notch every **100 MHz**, previews while dragging, and saves once released rather than sending requests for every movement. Its limits and notches refresh after every saved change.
 - The **Refresh** icon in the tile's top-right corner reads the live settings. Live values also refresh every ten seconds when you are not editing.
+- CPU load rows show sampled **GHz** values every three seconds while those rows and the dashboard are visible. These are Linux-reported samples, not guaranteed instantaneous hardware measurements. No background service is installed.
 
 The initial installation leaves CPU settings unchanged. Successfully selected values are saved to `/boot/config/plugins/dashboard-power-mode/settings.json` and restored during plugin installation at boot. Only controls you have changed are managed; unsupported controls are disabled. Controls briefly disable while a change is saving; there are no concurrent save requests or added background services.
 
@@ -38,7 +39,7 @@ The displayed frequency ceiling is what the kernel accepted, rather than a guara
 
 ## What This Plugin Does
 
-- Adds a native dashboard tile without patching Unraid's core files.
+- Integrates into the native Processor tile without patching Unraid's core files.
 - Discovers CPUFreq policies and exposes governors supported by every policy.
 - Uses Intel `no_turbo`, global CPUFreq `boost`, or per-policy boost interfaces when available.
 - Applies one frequency ceiling within a range valid across all CPU policies.
